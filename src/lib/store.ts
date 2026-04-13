@@ -370,26 +370,32 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
   disconnect: () => {
     const api = getDerivAPI();
-    api.unsubscribeFromTicks(get().currentSymbol);
-    api.unsubscribeFromOpenContracts();
-    api.disconnect();
+    try { api.unsubscribeFromTicks(get().currentSymbol); } catch(e) {}
+    try { api.unsubscribeFromOpenContracts(); } catch(e) {}
+    try { api.disconnect(); } catch(e) {}
     set({
       isConnected: false,
       isAuthorized: false,
       isAutoTrading: false,
+      apiToken: '',          // ← Limpiar token para que al recargar pida uno nuevo
       balance: 0,
       currency: 'USD',
       loginId: '',
+      isVirtual: true,
       accountList: null,
       currentPrice: 0,
       ticks: [],
       tickHistory: [],
+      openTrades: [],
       currentProposal: null,
       connectionError: null,
       isSessionPaused: false,
       pauseReason: '',
+      lastSignal: null,
+      consecutiveLosses: 0,
+      martingaleStep: 0,
     });
-    get().addLog('info', 'Disconnected from Deriv');
+    get().addLog('info', '🔌 Desconectado de Deriv. Token eliminado.');
   },
 
   subscribeToMarket: async (symbol: string) => {
@@ -523,38 +529,30 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     }
 
     // ── Determinar contract_type correcto según el mercado ──
-    // Deriv usa CALL/PUT para Volatility y RISE/FALL para Boom/Crash
     const sym = state.currentSymbol.toUpperCase();
     const isBoomCrash = sym.includes('BOOM') || sym.includes('CRASH');
-    let derivContractType: string = type; // 'CALL' o 'PUT' por defecto
+
+    // Boom/Crash → RISE/FALL | Volatility/Metals → CALL/PUT
+    let derivContractType: string = type === 'CALL' ? 'CALL' : 'PUT';
     if (isBoomCrash) {
-      // Boom/Crash usan RISE/FALL en la API de Deriv
       derivContractType = type === 'CALL' ? 'RISE' : 'FALL';
     }
 
-    get().addLog('info', `Requesting ${derivContractType} contract for ${state.currentSymbol} @ $${effectiveAmount.toFixed(2)}...`);
+    // Duration: Boom/Crash requieren ticks (t), Volatility acepta ticks también
+    const derivDuration     = state.contractDuration > 0 ? state.contractDuration : 5;
+    const derivDurationUnit = state.contractDurationUnit || 't';
 
-    // Verificación suave — solo warn si hay datos de contract_types, no bloquear
-    const activeSymbol = state.availableSymbols.find((s: ActiveSymbol) => s.symbol === state.currentSymbol);
-    if (activeSymbol && activeSymbol.contract_types && activeSymbol.contract_types.length > 0) {
-      const supported = activeSymbol.contract_types.includes(derivContractType)
-        || activeSymbol.contract_types.includes(type)
-        || activeSymbol.contract_types.includes('CALL')
-        || activeSymbol.contract_types.includes('RISE');
-      if (!supported) {
-        get().addLog('warning', `⚠️ ${state.currentSymbol} puede no soportar ${derivContractType}. Tipos disponibles: ${activeSymbol.contract_types.join(', ')}. Intentando de todas formas...`);
-      }
-    }
+    get().addLog('info', `Requesting ${derivContractType} for ${state.currentSymbol} | ${derivDuration}${derivDurationUnit} | $${effectiveAmount.toFixed(2)}`);
 
     try {
       const proposal = await api.getProposal({
         contract_type: derivContractType,
-        symbol: state.currentSymbol,
-        amount: effectiveAmount,
-        duration: state.contractDuration,
-        duration_unit: state.contractDurationUnit,
-        basis: 'stake',
-        currency: state.currency,
+        symbol:        state.currentSymbol,
+        amount:        effectiveAmount,
+        duration:      derivDuration,
+        duration_unit: derivDurationUnit,
+        basis:         'stake',
+        currency:      state.currency || 'USD',
       });
 
       if (proposal.proposal) {
@@ -607,7 +605,15 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         }
       }
     } catch (error: any) {
-      get().addLog('error', `Trade failed: ${error.message}`);
+      let errMsg = error.message || 'Unknown error';
+      if (errMsg.includes('contract_type') || errMsg.includes('Input validation')) {
+        errMsg = `Tipo de contrato rechazado por Deriv para ${state.currentSymbol}. Intenta con Volatility 10 (R_10) o cambia la duración.`;
+      } else if (errMsg.includes('InsufficientBalance') || errMsg.includes('insufficient')) {
+        errMsg = `Balance insuficiente. Balance: $${state.balance.toFixed(2)}`;
+      } else if (errMsg.includes('MarketIsClosed') || errMsg.includes('market is closed')) {
+        errMsg = `Mercado ${state.currentSymbol} cerrado. Prueba otro mercado.`;
+      }
+      get().addLog('error', `❌ Trade fallido: ${errMsg}`);
       set({ currentProposal: null });
       get().playSound('alert');
     }

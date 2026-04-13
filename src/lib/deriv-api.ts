@@ -341,12 +341,23 @@ class DerivAPI {
     basis?: string;
     currency?: string;
   }): Promise<ProposalResponse> {
+    // NOTA: NO incluir product_type aquí — Deriv lo rechaza en el proposal
     const response = await this.sendRequest({
       proposal: 1,
-      product_type: 'basic',
       ...params,
     });
     return response as ProposalResponse;
+  }
+
+  // Obtiene los contratos válidos para un símbolo específico
+  async getContractsFor(symbol: string): Promise<any> {
+    const response = await this.sendRequest({
+      contracts_for: symbol,
+      currency: 'USD',
+      landing_company: 'svg',
+      product_type: 'basic',
+    });
+    return response;
   }
 
   async getActiveSymbols(productType: string = 'basic'): Promise<ActiveSymbol[]> {
