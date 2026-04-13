@@ -217,7 +217,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   // Auto-trade config
   autoTradeCooldown: false,
   minTicksBetweenTrades: 10,
-  maxConcurrentTrades: 3,
+  maxConcurrentTrades: 5,
   signalCooldown: false,
 
   // Notifications
@@ -317,13 +317,23 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         if (data.proposal_open_contract) {
           const poc = data.proposal_open_contract;
 
-          if (poc.is_sold || poc.status === 'sold') {
-            const profit = poc.profit;
-            const won = profit > 0;
+          // Deriv sends different status values depending on how the contract ended:
+          // - 'won'  / 'lost'  → contract expired naturally (most common for 5-tick binary options)
+          // - 'sold'           → contract was manually sold before expiry
+          // - is_sold === 1    → also indicates a closed contract
+          const isClosed =
+            poc.is_sold === 1 ||
+            poc.status === 'won' ||
+            poc.status === 'lost' ||
+            poc.status === 'sold';
+
+          if (isClosed) {
+            const profit = typeof poc.profit === 'number' ? poc.profit : parseFloat(poc.profit) || 0;
+            const won = poc.status === 'won' || (poc.status !== 'lost' && profit > 0);
 
             get().addLog(
               won ? 'success' : 'warning',
-              `Contract #${poc.contract_id} closed: ${won ? 'WON' : 'LOST'} ${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}`
+              `Contract #${poc.contract_id} closed: ${won ? '✅ WON' : '❌ LOST'} ${profit >= 0 ? '+' : ''}$${profit.toFixed(2)}`
             );
 
             if (won) {
@@ -332,6 +342,11 @@ export const useTradingStore = create<TradingState>((set, get) => ({
             } else {
               get().playSound('loss');
               get().sendNotification('Trade Lost ❌', `-$${Math.abs(profit).toFixed(2)} on ${poc.symbol}`);
+            }
+
+            // Update balance if Deriv provides it
+            if (poc.balance_after != null) {
+              set({ balance: poc.balance_after });
             }
 
             get().updateTradeRecord(poc.contract_id, {
