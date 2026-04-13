@@ -57,12 +57,14 @@ interface TradingState {
   isAuthorized: boolean;
   isConnecting: boolean;
   apiToken: string;
+  appId: string;
   connectionError: string | null;
 
   // Account
   balance: number;
   currency: string;
   loginId: string;
+  isVirtual: boolean;
   accountList: any;
 
   // Market
@@ -125,7 +127,7 @@ interface TradingState {
   supportedMarkets: typeof SYNTHETIC_MARKETS;
 
   // Actions
-  connect: (token?: string) => Promise<void>;
+  connect: (token?: string, appId?: string) => Promise<void>;
   disconnect: () => void;
   subscribeToMarket: (symbol: string) => Promise<void>;
   setTradeAmount: (amount: number) => void;
@@ -157,12 +159,14 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   isAuthorized: false,
   isConnecting: false,
   apiToken: '',
+  appId: '1089',
   connectionError: null,
 
   // Account
   balance: 0,
   currency: 'USD',
   loginId: '',
+  isVirtual: true,
   accountList: null,
 
   // Market
@@ -225,20 +229,29 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   supportedMarkets: SYNTHETIC_MARKETS,
 
   // Actions
-  connect: async (token?: string) => {
+  connect: async (token?: string, appId?: string) => {
     const api = getDerivAPI();
-    const stateToken = get().apiToken || token;
+    // Clean token: strip all whitespace, invisible chars, and quotes
+    const rawToken = get().apiToken || token || '';
+    const stateToken = rawToken.replace(/[\s\u200B\u200C\u200D\uFEFF'"]/g, '');
 
     if (!stateToken) {
       set({ connectionError: 'API token is required' });
       return;
     }
 
-    set({ isConnecting: true, connectionError: null, apiToken: stateToken });
-    get().addLog('info', 'Connecting to Deriv...');
+    // Basic format validation — Deriv tokens are 15 alphanumeric chars
+    if (stateToken.length < 10 || stateToken.length > 64) {
+      set({ connectionError: `Invalid token length (${stateToken.length} chars). Deriv tokens are usually 15 characters. Create a new token at app.deriv.com/account/api-token` });
+      return;
+    }
+
+    const effectiveAppId = appId || get().appId || '1089';
+    set({ isConnecting: true, connectionError: null, apiToken: stateToken, appId: effectiveAppId });
+    get().addLog('info', `Connecting to Deriv (app_id: ${effectiveAppId})...`);
 
     try {
-      await api.connect();
+      await api.connect(effectiveAppId);
       set({ isConnected: true, isConnecting: false });
       get().addLog('success', 'Connected to Deriv WebSocket server');
       get().playSound('trade');
@@ -250,6 +263,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         balance: auth.authorize.balance,
         currency: auth.authorize.currency,
         loginId: auth.authorize.loginid,
+        isVirtual: auth.authorize.is_virtual === 1 || auth.authorize.is_virtual === true,
         accountList: auth.authorize.account_list || null,
       });
       get().addLog('success', `Authorized: ${auth.authorize.fullname} (${auth.authorize.loginid})`);
@@ -327,10 +341,21 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       // Subscribe to current market
       await get().subscribeToMarket(get().currentSymbol);
     } catch (error: any) {
+      // Translate Deriv error codes to friendly messages
+      let errMsg = error.message || 'Connection failed';
+      if (errMsg.includes('Input validation failed') || errMsg.includes('authorize')) {
+        errMsg = '❌ Token inválido. Asegúrate de: 1) Crear el token en app.deriv.com/account/api-token  2) Activar permisos: Read + Trade + Payments + Admin  3) Copiar el token completo sin espacios';
+      } else if (errMsg.includes('InvalidToken') || errMsg.includes('invalid token')) {
+        errMsg = '❌ Token expirado o inválido. Crea un nuevo token en Deriv.';
+      } else if (errMsg.includes('RateLimit')) {
+        errMsg = '⏳ Demasiados intentos. Espera 1 minuto e intenta de nuevo.';
+      } else if (errMsg.includes('timeout') || errMsg.includes('Timeout')) {
+        errMsg = '⏱️ Tiempo agotado. Verifica tu conexión a internet e intenta de nuevo.';
+      }
       set({
         isConnecting: false,
         isConnected: false,
-        connectionError: error.message || 'Connection failed',
+        connectionError: errMsg,
       });
       get().addLog('error', `Connection failed: ${error.message}`);
       get().playSound('alert');
