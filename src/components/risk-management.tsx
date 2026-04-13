@@ -222,10 +222,10 @@ export function RiskManagementPanel() {
               <Input
                 type="number"
                 value={riskSettings.maxTradesPerSession}
-                onChange={(e) => updateRiskSettings({ maxTradesPerSession: parseInt(e.target.value) || 1 })}
+                onChange={(e) => updateRiskSettings({ maxTradesPerSession: Math.max(1, parseInt(e.target.value) || 100) })}
                 className="w-20 h-7 text-xs text-right font-mono bg-background/50"
                 min={1}
-                max={200}
+                max={500}
               />
             </div>
 
@@ -237,7 +237,7 @@ export function RiskManagementPanel() {
               <Input
                 type="number"
                 value={riskSettings.stopAfterConsecutiveLosses}
-                onChange={(e) => updateRiskSettings({ stopAfterConsecutiveLosses: parseInt(e.target.value) || 1 })}
+                onChange={(e) => updateRiskSettings({ stopAfterConsecutiveLosses: Math.max(1, parseInt(e.target.value) || 5) })}
                 className="w-20 h-7 text-xs text-right font-mono bg-background/50"
                 min={1}
                 max={20}

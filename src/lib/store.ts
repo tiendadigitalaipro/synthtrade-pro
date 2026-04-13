@@ -41,7 +41,7 @@ interface RiskSettings {
 const defaultRiskSettings: RiskSettings = {
   maxDailyLoss: 20,
   dailyProfitTarget: 50,
-  maxTradesPerSession: 30,
+  maxTradesPerSession: 100,
   stopAfterConsecutiveLosses: 5,
   useMartingale: false,
   martingaleMultiplier: 2.0,
@@ -529,16 +529,12 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     }
 
     // ── Determinar contract_type correcto según el mercado ──
-    const sym = state.currentSymbol.toUpperCase();
-    const isBoomCrash = sym.includes('BOOM') || sym.includes('CRASH');
+    // Todos los índices sintéticos de Deriv (Volatility, Jump, Boom, Crash, Metals)
+    // usan CALL/PUT para opciones binarias estándar.
+    // RISE/FALL son para un tipo de contrato diferente (Up/Down) y Deriv los rechaza aquí.
+    const derivContractType: string = type === 'CALL' ? 'CALL' : 'PUT';
 
-    // Boom/Crash → RISE/FALL | Volatility/Metals → CALL/PUT
-    let derivContractType: string = type === 'CALL' ? 'CALL' : 'PUT';
-    if (isBoomCrash) {
-      derivContractType = type === 'CALL' ? 'RISE' : 'FALL';
-    }
-
-    // Duration: Boom/Crash requieren ticks (t), Volatility acepta ticks también
+    // Duration: ticks (t) funciona para todos los mercados sintéticos
     const derivDuration     = state.contractDuration > 0 ? state.contractDuration : 5;
     const derivDurationUnit = state.contractDurationUnit || 't';
 
@@ -607,7 +603,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     } catch (error: any) {
       let errMsg = error.message || 'Unknown error';
       if (errMsg.includes('contract_type') || errMsg.includes('Input validation')) {
-        errMsg = `Tipo de contrato rechazado por Deriv para ${state.currentSymbol}. Intenta con Volatility 10 (R_10) o cambia la duración.`;
+        errMsg = `Tipo de contrato rechazado por Deriv para ${state.currentSymbol}. Verifica que el símbolo esté activo y la duración sea válida (ej: 5 ticks).`;
       } else if (errMsg.includes('InsufficientBalance') || errMsg.includes('insufficient')) {
         errMsg = `Balance insuficiente. Balance: $${state.balance.toFixed(2)}`;
       } else if (errMsg.includes('MarketIsClosed') || errMsg.includes('market is closed')) {
