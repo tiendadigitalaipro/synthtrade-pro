@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { db } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find license registered to this device
-    const license = await prisma.license.findFirst({
+    const license = await db.license.findFirst({
       where: { deviceId },
     });
 
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       if (now >= expiresAt) {
         // Mark as expired if not already
         if (license.status !== 'EXPIRED') {
-          await prisma.license.update({
+          await db.license.update({
             where: { id: license.id },
             data: { status: 'EXPIRED' },
           });

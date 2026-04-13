@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { db } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const cleanKey = key.trim().toUpperCase();
 
     // Find license by key
-    const license = await prisma.license.findUnique({
+    const license = await db.license.findUnique({
       where: { key: cleanKey },
     });
 
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Activate: bind to device
-    const updated = await prisma.license.update({
+    const updated = await db.license.update({
       where: { id: license.id },
       data: {
         deviceId,

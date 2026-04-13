@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { db } from '@/lib/db';
 
 const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY || 'STP-ADMIN-A2K-2024';
 
@@ -19,7 +19,7 @@ function generateLicenseKey(type: 'PRO' | 'DEMO'): string {
 export async function GET(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const licenses = await prisma.license.findMany({
+  const licenses = await db.license.findMany({
     orderBy: { createdAt: 'desc' },
   });
 
@@ -40,12 +40,12 @@ export async function POST(req: NextRequest) {
   const key = customKey ? customKey.trim().toUpperCase() : generateLicenseKey(type);
 
   // Check duplicate key
-  const existing = await prisma.license.findUnique({ where: { key } });
+  const existing = await db.license.findUnique({ where: { key } });
   if (existing) {
     return NextResponse.json({ error: 'Key already exists' }, { status: 409 });
   }
 
-  const license = await prisma.license.create({
+  const license = await db.license.create({
     data: {
       key,
       clientName,
@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest) {
     updateData.status = 'ACTIVE';
   }
 
-  const updated = await prisma.license.update({
+  const updated = await db.license.update({
     where: { id },
     data: updateData,
   });
@@ -96,6 +96,6 @@ export async function DELETE(req: NextRequest) {
 
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-  await prisma.license.delete({ where: { id } });
+  await db.license.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }
