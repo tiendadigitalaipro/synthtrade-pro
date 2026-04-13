@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TradeRecord {
+  id           String   @id @default(cuid())
+  symbol       String
+  contractType String
+  entryTime    DateTime @default(now())
+  exitTime     DateTime?
+  entryPrice   Float
+  exitPrice    Float?
+  profit       Float    @default(0)
+  strategy     String
+  status       String   @default("OPEN")
+  amount       Float
+  payout       Float    @default(0)
+  contractId   Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model BotSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model License {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  clientName  String
+  type        String    @default("PRO")
+  status      String    @default("ACTIVE")
+  deviceId    String?
+  activatedAt DateTime?
+  expiresAt   DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}

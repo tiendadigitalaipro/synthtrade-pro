@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iron Lock — Panel de Licencias | SynthTrade Pro</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: rgba(255,255,255,0.08);
+    --text: #f1f5f9;
+    --muted: #64748b;
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,0.15);
+    --emerald: #10b981;
+    --emerald-dim: rgba(16,185,129,0.15);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.15);
+    --yellow: #eab308;
+    --yellow-dim: rgba(234,179,8,0.12);
+    --blue: #3b82f6;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* ─── LOGIN ─── */
+  #loginWrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+  }
+  .logo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+  }
+  .logo-icon {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, #f59e0b, #ea580c);
+    border-radius: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 8px 32px rgba(245,158,11,0.35);
+  }
+  .logo-title { font-size: 1.4rem; font-weight: 800; }
+  .logo-title span { color: var(--amber); }
+  .logo-sub { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .field-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.4rem; display: block; }
+  .field-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 1rem;
+  }
+  .field-input:focus { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(245,158,11,0.15); }
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, var(--amber), #ea580c);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border: none;
+    border-radius: 0.6rem;
+    padding: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:active { transform: scale(0.98); }
+  .login-error {
+    background: var(--red-dim);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.75rem;
+    color: #fca5a5;
+    margin-bottom: 0.75rem;
+    display: none;
+  }
+
+  /* ─── MAIN PANEL ─── */
+  #mainPanel { display: none; }
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 0.75rem; }
+  .topbar-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #f59e0b, #ea580c); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+  .topbar-title { font-weight: 700; font-size: 1rem; }
+  .topbar-title span { color: var(--amber); }
+  .topbar-sub { font-size: 0.65rem; color: var(--muted); }
+  .btn-logout {
+    background: var(--red-dim);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #fca5a5;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-logout:hover { background: rgba(239,68,68,0.25); }
+
+  .content { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+
+  /* Stats Row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-num { font-size: 1.75rem; font-weight: 800; font-family: var(--mono); }
+  .stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.25rem; }
+
+  /* Add License Section */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-title .icon { font-size: 1rem; }
+  .form-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr auto;
+    gap: 0.75rem;
+    align-items: end;
+  }
+  @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+  .form-group label { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 0.35rem; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    color: var(--text);
+    font-size: 0.8rem;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--amber);
+  }
+  .form-group select option { background: var(--surface); }
+  .btn-add {
+    background: linear-gradient(135deg, var(--emerald), #059669);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    height: fit-content;
+  }
+  .btn-add:hover { opacity: 0.85; }
+  .add-feedback {
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.4rem;
+    display: none;
+  }
+  .add-feedback.success { background: var(--emerald-dim); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); display: block; }
+  .add-feedback.error { background: var(--red-dim); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); display: block; }
+
+  /* Filters */
+  .filter-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--amber-dim);
+    border-color: rgba(245,158,11,0.4);
+    color: var(--amber);
+  }
+  .search-input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    color: var(--text);
+    font-size: 0.8rem;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--amber); }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.6rem 0.85rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  td { padding: 0.75rem 0.85rem; font-size: 0.8rem; vertical-align: middle; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 2rem;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+  }
+  .badge-active { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
+  .badge-paused { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+  .badge-blocked { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .badge-expired { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.3); }
+  .badge-pro { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-demo { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+
+  .key-mono { font-family: var(--mono); font-size: 0.75rem; color: #cbd5e1; letter-spacing: 0.03em; }
+  .device-mono { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+  .no-device { color: var(--muted); font-style: italic; font-size: 0.7rem; }
+
+  /* Action Buttons */
+  .actions { display: flex; gap: 0.35rem; }
+  .btn-action {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.3rem 0.65rem;
+    border-radius: 0.35rem;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn-action:hover { opacity: 0.8; }
+  .btn-action:active { transform: scale(0.96); }
+  .btn-pause { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(234,179,8,0.3); }
+  .btn-block { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .btn-unblock { background: var(--emerald-dim); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
+  .btn-edit { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+  .btn-clear { background: rgba(168,85,247,0.12); color: #c084fc; border: 1px solid rgba(168,85,247,0.3); }
+  .btn-delete { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+  /* Modal */
+  .modal-bg {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .modal-bg.open { display: flex; }
+  .modal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+  }
+  .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem; }
+  .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+  .btn-cancel:hover { background: rgba(255,255,255,0.04); }
+  .btn-confirm {
+    background: linear-gradient(135deg, var(--amber), #ea580c);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    cursor: pointer;
+  }
+  .btn-confirm:hover { opacity: 0.9; }
+  .btn-confirm.danger { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.7rem 1.1rem;
+    border-radius: 0.6rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    max-width: 320px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { background: var(--emerald-dim); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.4); }
+  #toast.error { background: var(--red-dim); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+  #toast.info { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.4); }
+
+  .empty-state { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; }
+  .copy-btn { cursor: pointer; font-size: 0.7rem; color: var(--muted); margin-left: 4px; }
+  .copy-btn:hover { color: var(--amber); }
+  .expiry-near { color: var(--amber); font-size: 0.75rem; }
+  .expiry-expired { color: var(--red); font-size: 0.75rem; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN SCREEN ═══════ -->
+<div id="loginWrap">
+  <div class="login-card">
+    <div class="logo-wrap">
+      <div class="logo-icon">🔐</div>
+      <div>
+        <div class="logo-title">Iron<span>Lock</span></div>
+        <div class="logo-sub">SynthTrade Pro — License Admin</div>
+      </div>
+    </div>
+    <div class="login-error" id="loginErr">Incorrect admin key. Try again.</div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="field-label">Admin Key</label>
+      <input type="password" class="field-input" id="adminKeyInput" placeholder="STP-ADMIN-..." onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">🔓 Access Panel</button>
+    <p style="text-align:center;font-size:0.7rem;color:var(--muted);margin-top:1rem">A2K Digital Studio — SynthTrade Pro v1.0</p>
+  </div>
+</div>
+
+<!-- ═══════ MAIN PANEL ═══════ -->
+<div id="mainPanel">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon">🤖</div>
+      <div>
+        <div class="topbar-title">Iron<span>Lock</span> Panel</div>
+        <div class="topbar-sub">SynthTrade Pro — License Management</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">⏻ Logout</button>
+  </div>
+
+  <div class="content">
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="stat-num" id="statTotal" style="color:var(--amber)">-</div><div class="stat-label">Total Licenses</div></div>
+      <div class="stat-card"><div class="stat-num" id="statActive" style="color:var(--emerald)">-</div><div class="stat-label">Active</div></div>
+      <div class="stat-card"><div class="stat-num" id="statDemo" style="color:var(--blue)">-</div><div class="stat-label">Demo</div></div>
+      <div class="stat-card"><div class="stat-num" id="statPro" style="color:var(--amber)">-</div><div class="stat-label">PRO</div></div>
+      <div class="stat-card"><div class="stat-num" id="statBlocked" style="color:var(--red)">-</div><div class="stat-label">Blocked/Paused</div></div>
+      <div class="stat-card"><div class="stat-num" id="statExpired" style="color:var(--muted)">-</div><div class="stat-label">Expired</div></div>
+    </div>
+
+    <!-- Add New License -->
+    <div class="section-card">
+      <div class="section-title"><span class="icon">➕</span> Create New License</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Client Name *</label>
+          <input type="text" id="newClientName" placeholder="e.g. Juan Pérez">
+        </div>
+        <div class="form-group">
+          <label>License Type</label>
+          <select id="newType">
+            <option value="PRO">PRO (No Expiry)</option>
+            <option value="DEMO">DEMO (3 Days)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <input type="text" id="newNotes" placeholder="e.g. WhatsApp contact, referral...">
+        </div>
+        <div class="form-group">
+          <label>&nbsp;</label>
+          <button class="btn-add" onclick="createLicense()">+ Generate Key</button>
+        </div>
+      </div>
+      <div class="add-feedback" id="addFeedback"></div>
+    </div>
+
+    <!-- License Table -->
+    <div class="section-card" style="padding-bottom:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+        <div class="section-title" style="margin-bottom:0"><span class="icon">🗃️</span> All Licenses</div>
+        <div class="filter-row" style="margin-bottom:0">
+          <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search client, key..." oninput="renderTable()">
+          <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL',this)">All</button>
+          <button class="filter-btn" data-filter="ACTIVE" onclick="setFilter('ACTIVE',this)">Active</button>
+          <button class="filter-btn" data-filter="BLOCKED" onclick="setFilter('BLOCKED',this)">Blocked</button>
+          <button class="filter-btn" data-filter="PAUSED" onclick="setFilter('PAUSED',this)">Paused</button>
+          <button class="filter-btn" data-filter="EXPIRED" onclick="setFilter('EXPIRED',this)">Expired</button>
+          <button class="filter-btn" onclick="loadLicenses()" title="Refresh">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Key</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Device ID</th>
+              <th>Activated</th>
+              <th>Expires</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="licenseTable">
+            <tr><td colspan="9" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="height:1.25rem"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════ EDIT MODAL ═══════ -->
+<div class="modal-bg" id="editModal">
+  <div class="modal-card">
+    <div class="modal-title">✏️ Edit License</div>
+    <input type="hidden" id="editId">
+    <div class="form-group" style="margin-bottom:0.85rem">
+      <label>Client Name</label>
+      <input type="text" class="form-group input" id="editClientName" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:0.5rem;padding:0.65rem 0.85rem;color:var(--text);font-size:0.8rem;outline:none;">
+    </div>
+    <div class="form-group" style="margin-bottom:0.85rem">
+      <label>Device ID (paste to pre-assign)</label>
+      <input type="text" id="editDeviceId" placeholder="Leave empty to keep current" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:0.5rem;padding:0.65rem 0.85rem;color:var(--text);font-family:var(--mono);font-size:0.75rem;outline:none;">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label>Notes</label>
+      <textarea id="editNotes" rows="2" style="width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:0.5rem;padding:0.65rem 0.85rem;color:var(--text);font-size:0.8rem;outline:none;resize:vertical;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn-confirm" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ CONFIRM MODAL ═══════ -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal-card">
+    <div class="modal-title" id="confirmTitle">Confirm Action</div>
+    <p id="confirmMsg" style="font-size:0.85rem;color:var(--muted);line-height:1.5"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn-confirm" id="confirmOkBtn" onclick="">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ TOAST ═══════ -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  IRON LOCK ADMIN PANEL — SynthTrade Pro | A2K Digital Studio
+// ═══════════════════════════════════════════════════════════
+
+const API_BASE = window.location.origin; // Same-origin Next.js API
+let ADMIN_KEY = '';
+let allLicenses = [];
+let currentFilter = 'ALL';
+
+// ─── Auth ────────────────────────────────────────────────
+function doLogin() {
+  const key = document.getElementById('adminKeyInput').value.trim();
+  if (!key) return;
+  ADMIN_KEY = key;
+  // Try loading — if 401 we'll show error
+  loadLicenses(true);
+}
+
+function doLogout() {
+  ADMIN_KEY = '';
+  allLicenses = [];
+  document.getElementById('loginWrap').style.display = 'flex';
+  document.getElementById('mainPanel').style.display = 'none';
+  document.getElementById('adminKeyInput').value = '';
+  document.getElementById('loginErr').style.display = 'none';
+}
+
+// ─── API Calls ───────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${API_BASE}/api/license/admin${path}`, opts);
+  return { ok: res.ok, status: res.status, data: await res.json() };
+}
+
+async function loadLicenses(initial) {
+  const { ok, status, data } = await api('GET', '');
+  if (!ok) {
+    if (status === 401) {
+      document.getElementById('loginErr').style.display = 'block';
+      return;
+    }
+    showToast('Error loading licenses: ' + (data.error || status), 'error');
+    return;
+  }
+  if (initial) {
+    document.getElementById('loginErr').style.display = 'none';
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('mainPanel').style.display = 'block';
+  }
+  allLicenses = data;
+  updateStats();
+  renderTable();
+}
+
+// ─── Stats ───────────────────────────────────────────────
+function updateStats() {
+  const total = allLicenses.length;
+  const active = allLicenses.filter(l => l.status === 'ACTIVE').length;
+  const demo = allLicenses.filter(l => l.type === 'DEMO').length;
+  const pro = allLicenses.filter(l => l.type === 'PRO').length;
+  const blocked = allLicenses.filter(l => l.status === 'BLOCKED' || l.status === 'PAUSED').length;
+  const expired = allLicenses.filter(l => l.status === 'EXPIRED').length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statActive').textContent = active;
+  document.getElementById('statDemo').textContent = demo;
+  document.getElementById('statPro').textContent = pro;
+  document.getElementById('statBlocked').textContent = blocked;
+  document.getElementById('statExpired').textContent = expired;
+}
+
+// ─── Filter & Render ────────────────────────────────────
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  let filtered = allLicenses;
+  if (currentFilter !== 'ALL') filtered = filtered.filter(l => l.status === currentFilter);
+  if (search) filtered = filtered.filter(l =>
+    l.clientName.toLowerCase().includes(search) ||
+    l.key.toLowerCase().includes(search) ||
+    (l.notes || '').toLowerCase().includes(search) ||
+    (l.deviceId || '').toLowerCase().includes(search)
+  );
+
+  const tbody = document.getElementById('licenseTable');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No licenses found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(lic => {
+    const statusBadge = {
+      ACTIVE: `<span class="badge badge-active">● Active</span>`,
+      PAUSED: `<span class="badge badge-paused">⏸ Paused</span>`,
+      BLOCKED: `<span class="badge badge-blocked">✕ Blocked</span>`,
+      EXPIRED: `<span class="badge badge-expired">⌛ Expired</span>`,
+    }[lic.status] || `<span class="badge">${lic.status}</span>`;
+
+    const typeBadge = lic.type === 'PRO'
+      ? `<span class="badge badge-pro">⚡ PRO</span>`
+      : `<span class="badge badge-demo">🔬 DEMO</span>`;
+
+    const deviceCell = lic.deviceId
+      ? `<span class="device-mono" title="${lic.deviceId}">${lic.deviceId.slice(0,12)}…${lic.deviceId.slice(-6)}</span>
+         <button class="copy-btn" onclick="copyText('${lic.deviceId}')" title="Copy Device ID">⧉</button>`
+      : `<span class="no-device">Not activated</span>`;
+
+    const keyCell = `<span class="key-mono">${lic.key}</span>
+      <button class="copy-btn" onclick="copyText('${lic.key}')" title="Copy Key">⧉</button>`;
+
+    const activatedDate = lic.activatedAt
+      ? new Date(lic.activatedAt).toLocaleDateString('es-VE')
+      : '<span style="color:var(--muted);font-style:italic;font-size:0.7rem">—</span>';
+
+    let expiryCell = '<span style="color:var(--muted);font-size:0.75rem">Never</span>';
+    if (lic.expiresAt) {
+      const exp = new Date(lic.expiresAt);
+      const now = new Date();
+      const msLeft = exp - now;
+      const daysLeft = Math.floor(msLeft / 86400000);
+      if (msLeft < 0) {
+        expiryCell = `<span class="expiry-expired">Expired ${exp.toLocaleDateString('es-VE')}</span>`;
+      } else if (daysLeft <= 1) {
+        expiryCell = `<span class="expiry-near">⚠ ${daysLeft}d left — ${exp.toLocaleDateString('es-VE')}</span>`;
+      } else {
+        expiryCell = `<span style="font-size:0.75rem">${daysLeft}d left<br><span style="font-size:0.65rem;color:var(--muted)">${exp.toLocaleDateString('es-VE')}</span></span>`;
+      }
+    }
+
+    const isPaused = lic.status === 'PAUSED';
+    const isBlocked = lic.status === 'BLOCKED';
+    const isActive = lic.status === 'ACTIVE';
+
+    const actionBtns = `
+      <div class="actions">
+        <button class="btn-action btn-edit" onclick="openEdit('${lic.id}')">✏ Edit</button>
+        ${isActive ? `<button class="btn-action btn-pause" onclick="confirmAction('${lic.id}','PAUSED','Pause license for ${escHtml(lic.clientName)}?')">⏸</button>` : ''}
+        ${(isPaused || isActive) ? `<button class="btn-action btn-block" onclick="confirmAction('${lic.id}','BLOCKED','Block license for ${escHtml(lic.clientName)}?')">✕ Block</button>` : ''}
+        ${(isPaused || isBlocked) ? `<button class="btn-action btn-unblock" onclick="confirmAction('${lic.id}','ACTIVE','Reactivate license for ${escHtml(lic.clientName)}?')">✓ Unblock</button>` : ''}
+        ${lic.deviceId ? `<button class="btn-action btn-clear" onclick="clearDevice('${lic.id}','${escHtml(lic.clientName)}')">⌫ Reset Device</button>` : ''}
+        <button class="btn-action btn-delete" onclick="deleteLicense('${lic.id}','${escHtml(lic.clientName)}')">🗑</button>
+      </div>
+    `;
+
+    return `<tr>
+      <td><strong>${escHtml(lic.clientName)}</strong>${lic.notes ? `<br><span style="font-size:0.65rem;color:var(--muted)">${escHtml(lic.notes)}</span>` : ''}</td>
+      <td>${keyCell}</td>
+      <td>${typeBadge}</td>
+      <td>${statusBadge}</td>
+      <td>${deviceCell}</td>
+      <td style="font-size:0.75rem">${activatedDate}</td>
+      <td>${expiryCell}</td>
+      <td style="font-size:0.7rem;color:var(--muted)">${escHtml(lic.notes || '')}</td>
+      <td>${actionBtns}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Create License ───────────────────────────────────────
+async function createLicense() {
+  const clientName = document.getElementById('newClientName').value.trim();
+  const type = document.getElementById('newType').value;
+  const notes = document.getElementById('newNotes').value.trim();
+  const fb = document.getElementById('addFeedback');
+
+  if (!clientName) {
+    fb.className = 'add-feedback error';
+    fb.textContent = 'Client name is required.';
+    return;
+  }
+
+  const { ok, data } = await api('POST', '', { clientName, type, notes });
+  if (ok) {
+    fb.className = 'add-feedback success';
+    fb.textContent = `✓ License created! Key: ${data.key}`;
+    document.getElementById('newClientName').value = '';
+    document.getElementById('newNotes').value = '';
+    allLicenses.unshift(data);
+    updateStats();
+    renderTable();
+    showToast(`License created for ${data.clientName}: ${data.key}`, 'success');
+  } else {
+    fb.className = 'add-feedback error';
+    fb.textContent = '✕ Error: ' + (data.error || 'Could not create license');
+  }
+}
+
+// ─── Edit ────────────────────────────────────────────────
+function openEdit(id) {
+  const lic = allLicenses.find(l => l.id === id);
+  if (!lic) return;
+  document.getElementById('editId').value = id;
+  document.getElementById('editClientName').value = lic.clientName;
+  document.getElementById('editDeviceId').value = lic.deviceId || '';
+  document.getElementById('editNotes').value = lic.notes || '';
+  openModal('editModal');
+}
+
+async function saveEdit() {
+  const id = document.getElementById('editId').value;
+  const clientName = document.getElementById('editClientName').value.trim();
+  const deviceId = document.getElementById('editDeviceId').value.trim() || undefined;
+  const notes = document.getElementById('editNotes').value.trim();
+
+  const { ok, data } = await api('PATCH', '', { id, clientName, deviceId, notes });
+  closeModal('editModal');
+  if (ok) {
+    const idx = allLicenses.findIndex(l => l.id === id);
+    if (idx !== -1) allLicenses[idx] = data;
+    updateStats(); renderTable();
+    showToast('License updated.', 'success');
+  } else {
+    showToast('Update failed: ' + (data.error || ''), 'error');
+  }
+}
+
+// ─── Confirm Action (Pause/Block/Unblock) ────────────────
+function confirmAction(id, newStatus, msg) {
+  document.getElementById('confirmTitle').textContent = newStatus === 'ACTIVE' ? 'Unblock License' : newStatus === 'PAUSED' ? 'Pause License' : 'Block License';
+  document.getElementById('confirmMsg').textContent = msg;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.className = newStatus === 'BLOCKED' ? 'btn-confirm danger' : 'btn-confirm';
+  btn.onclick = () => doStatusChange(id, newStatus);
+  openModal('confirmModal');
+}
+
+async function doStatusChange(id, status) {
+  closeModal('confirmModal');
+  const { ok, data } = await api('PATCH', '', { id, status });
+  if (ok) {
+    const idx = allLicenses.findIndex(l => l.id === id);
+    if (idx !== -1) allLicenses[idx] = data;
+    updateStats(); renderTable();
+    showToast(`License ${status === 'ACTIVE' ? 'unblocked' : status.toLowerCase()}.`, status === 'BLOCKED' ? 'error' : 'success');
+  } else {
+    showToast('Action failed: ' + (data.error || ''), 'error');
+  }
+}
+
+// ─── Clear Device ─────────────────────────────────────────
+function clearDevice(id, name) {
+  document.getElementById('confirmTitle').textContent = 'Reset Device Binding';
+  document.getElementById('confirmMsg').textContent = `This will remove the device ID from ${name}'s license, allowing them to activate on a new device. Use only if the client changed devices.`;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.className = 'btn-confirm';
+  btn.onclick = () => doClearDevice(id);
+  openModal('confirmModal');
+}
+
+async function doClearDevice(id) {
+  closeModal('confirmModal');
+  const { ok, data } = await api('PATCH', '', { id, clearDevice: true });
+  if (ok) {
+    const idx = allLicenses.findIndex(l => l.id === id);
+    if (idx !== -1) allLicenses[idx] = data;
+    updateStats(); renderTable();
+    showToast('Device binding cleared. Client can re-activate.', 'info');
+  } else {
+    showToast('Failed to clear device: ' + (data.error || ''), 'error');
+  }
+}
+
+// ─── Delete ───────────────────────────────────────────────
+function deleteLicense(id, name) {
+  document.getElementById('confirmTitle').textContent = '🗑 Delete License';
+  document.getElementById('confirmMsg').textContent = `Are you sure you want to permanently delete ${name}'s license? This cannot be undone.`;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.className = 'btn-confirm danger';
+  btn.onclick = () => doDelete(id);
+  openModal('confirmModal');
+}
+
+async function doDelete(id) {
+  closeModal('confirmModal');
+  const { ok, data } = await api('DELETE', `?id=${id}`, null);
+  if (ok) {
+    allLicenses = allLicenses.filter(l => l.id !== id);
+    updateStats(); renderTable();
+    showToast('License deleted.', 'info');
+  } else {
+    showToast('Delete failed: ' + (data.error || ''), 'error');
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'info'));
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let toastTimer;
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Close modals on background click
+document.querySelectorAll('.modal-bg').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// Auto-load if admin key is in URL (dev convenience — don't use in prod)
+// const url = new URL(window.location.href);
+// if (url.searchParams.get('key')) { ADMIN_KEY = url.searchParams.get('key'); loadLicenses(true); }
+</script>
+</body>
+</html>
