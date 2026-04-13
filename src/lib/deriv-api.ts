@@ -351,7 +351,7 @@ class DerivAPI {
 
   async getActiveSymbols(productType: string = 'basic'): Promise<ActiveSymbol[]> {
     const response = await this.sendRequest({
-      active_symbols: 'brief',
+      active_symbols: 'full',  // 'brief' no devuelve contract_types — necesitamos 'full'
       product_type: productType,
     });
     return (response.active_symbols || []) as ActiveSymbol[];

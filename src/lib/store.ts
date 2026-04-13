@@ -284,14 +284,20 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         const activeSymbols = await api.getActiveSymbols('basic');
         set({ availableSymbols: activeSymbols });
 
-        // Filter supported markets to only show those available for trading
+        // Filter supported markets — solo excluir mercados suspendidos
+        // contract_types ahora viene de 'full' mode — CALL/PUT para Vol, RISE/FALL para Boom/Crash
         const availableSymbolMap = new Map(activeSymbols.map((s: ActiveSymbol) => [s.symbol, s]));
         const filteredMarkets = SYNTHETIC_MARKETS.filter((m) => {
           const active = availableSymbolMap.get(m.symbol);
           if (!active) return false;
-          // Check if CALL contract is supported
-          const hasCallPut = active.contract_types?.includes('CALL') || active.contract_types?.includes('RISE');
-          return hasCallPut && !active.is_trading_suspended;
+          if (active.is_trading_suspended) return false;
+          // Si no hay contract_types, asumir que el mercado es tradeable
+          if (!active.contract_types || active.contract_types.length === 0) return true;
+          // Aceptar si soporta CALL, PUT, RISE o FALL
+          return active.contract_types.includes('CALL')
+            || active.contract_types.includes('PUT')
+            || active.contract_types.includes('RISE')
+            || active.contract_types.includes('FALL');
         });
 
         set({ supportedMarkets: filteredMarkets.length > 0 ? filteredMarkets : SYNTHETIC_MARKETS });
@@ -516,19 +522,33 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return;
     }
 
-    get().addLog('info', `Requesting ${type} contract for ${state.currentSymbol} @ $${effectiveAmount.toFixed(2)}...`);
+    // ── Determinar contract_type correcto según el mercado ──
+    // Deriv usa CALL/PUT para Volatility y RISE/FALL para Boom/Crash
+    const sym = state.currentSymbol.toUpperCase();
+    const isBoomCrash = sym.includes('BOOM') || sym.includes('CRASH');
+    let derivContractType: string = type; // 'CALL' o 'PUT' por defecto
+    if (isBoomCrash) {
+      // Boom/Crash usan RISE/FALL en la API de Deriv
+      derivContractType = type === 'CALL' ? 'RISE' : 'FALL';
+    }
 
-    // Check if the current symbol is available for trading
+    get().addLog('info', `Requesting ${derivContractType} contract for ${state.currentSymbol} @ $${effectiveAmount.toFixed(2)}...`);
+
+    // Verificación suave — solo warn si hay datos de contract_types, no bloquear
     const activeSymbol = state.availableSymbols.find((s: ActiveSymbol) => s.symbol === state.currentSymbol);
-    if (activeSymbol && !activeSymbol.contract_types?.includes(type) && !activeSymbol.contract_types?.includes('RISE') && !activeSymbol.contract_types?.includes('FALL')) {
-      get().addLog('error', `${state.currentSymbol} does not support ${type} contracts. Try a different market (e.g., Volatility 10 or Volatility 75).`);
-      get().playSound('alert');
-      return;
+    if (activeSymbol && activeSymbol.contract_types && activeSymbol.contract_types.length > 0) {
+      const supported = activeSymbol.contract_types.includes(derivContractType)
+        || activeSymbol.contract_types.includes(type)
+        || activeSymbol.contract_types.includes('CALL')
+        || activeSymbol.contract_types.includes('RISE');
+      if (!supported) {
+        get().addLog('warning', `⚠️ ${state.currentSymbol} puede no soportar ${derivContractType}. Tipos disponibles: ${activeSymbol.contract_types.join(', ')}. Intentando de todas formas...`);
+      }
     }
 
     try {
       const proposal = await api.getProposal({
-        contract_type: type,
+        contract_type: derivContractType,
         symbol: state.currentSymbol,
         amount: effectiveAmount,
         duration: state.contractDuration,
