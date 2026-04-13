@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getDerivAPI, type Tick, type ActiveSymbol } from './deriv-api';
-import { generateCompositeSignal, type StrategySignal, SYNTHETIC_MARKETS } from './strategies';
+import { generateCompositeSignal, calculateATR, type StrategySignal, SYNTHETIC_MARKETS } from './strategies';
 
 export interface TradeRecord {
   id?: string;
@@ -34,6 +34,8 @@ interface RiskSettings {
   martingaleMultiplier: number;
   martingaleMaxSteps: number;
   minSignalConfidence: number;
+  riskPerTradePercent: number;   // Max % of balance per trade (1-2%)
+  useAtrSizing: boolean;         // Enable ATR-based position sizing
 }
 
 const defaultRiskSettings: RiskSettings = {
@@ -45,6 +47,8 @@ const defaultRiskSettings: RiskSettings = {
   martingaleMultiplier: 2.0,
   martingaleMaxSteps: 4,
   minSignalConfidence: 60,
+  riskPerTradePercent: 1.5,
+  useAtrSizing: true,
 };
 
 interface TradingState {
@@ -617,6 +621,28 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return;
     }
 
+    // ─── Max Risk Per Trade (1-2% of balance) ───────────────────
+    const maxStakeByRisk = state.balance * (risk.riskPerTradePercent / 100);
+    const baseStake = Math.min(state.baseTradeAmount, maxStakeByRisk);
+    if (baseStake < state.baseTradeAmount) {
+      get().addLog('info', `⚖️ Stake capped at $${baseStake.toFixed(2)} (${risk.riskPerTradePercent}% of $${state.balance.toFixed(2)} balance)`);
+    }
+
+    // ─── ATR-Based Dynamic Position Sizing ──────────────────────
+    let atrMultiplier = 1.0;
+    if (risk.useAtrSizing && state.tickHistory.length >= 20) {
+      const atr = calculateATR(state.tickHistory, 14);
+      const atrRatio = state.currentPrice > 0 ? atr / state.currentPrice : 0;
+      if (atrRatio > 0.02) {
+        atrMultiplier = 0.5;
+        get().addLog('info', `📉 ATR High (${(atrRatio*100).toFixed(2)}%): Stake reduced 50% for safety`);
+      } else if (atrRatio > 0.01) {
+        atrMultiplier = 0.75;
+        get().addLog('info', `📊 ATR Medium (${(atrRatio*100).toFixed(2)}%): Stake reduced 25%`);
+      }
+    }
+    const adjustedBaseStake = baseStake * atrMultiplier;
+
     // ─── Signal Analysis ────────────────────────────────────────
     const signal = generateCompositeSignal(state.tickHistory, state.selectedStrategies, state.currentSymbol);
     set({ lastSignal: signal });
@@ -632,7 +658,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       // Calculate martingale amount if enabled
       if (risk.useMartingale && state.consecutiveLosses > 0) {
         const step = Math.min(state.consecutiveLosses, risk.martingaleMaxSteps);
-        const martingaleAmount = state.baseTradeAmount * Math.pow(risk.martingaleMultiplier, step);
+        const martingaleAmount = adjustedBaseStake * Math.pow(risk.martingaleMultiplier, step);
         const maxAmount = state.balance * 0.1; // Never risk more than 10% of balance
         const clampedAmount = Math.min(martingaleAmount, maxAmount);
 
@@ -643,6 +669,11 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
         set({ tradeAmount: clampedAmount, martingaleStep: step });
         get().addLog('info', `📈 Martingale Step ${step}: Amount adjusted to $${clampedAmount.toFixed(2)} (base $${state.baseTradeAmount} × ${risk.martingaleMultiplier}^${step})`);
+      }
+
+      // Apply adjusted stake if not using martingale
+      if (!risk.useMartingale || state.consecutiveLosses === 0) {
+        set({ tradeAmount: adjustedBaseStake });
       }
 
       get().placeTrade(signal.type);
