@@ -152,6 +152,7 @@ interface TradingState {
 
 let tickCounter = 0;
 let signalCooldownTimer: ReturnType<typeof setTimeout> | null = null;
+let _activeTickCallback: ((data: unknown) => void) | null = null;
 
 export const useTradingStore = create<TradingState>((set, get) => ({
   // Connection
@@ -312,9 +313,8 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         get().addLog('warning', 'Could not verify available markets. All markets shown.');
       }
 
-      // Subscribe to open contracts
+      // Subscribe to open contracts (#4: add .catch, #13: validate contract_id)
       api.subscribeToOpenContracts((data: any) => {
-        if (data.proposal_open_contract) {
           const poc = data.proposal_open_contract;
 
           // Deriv sends different status values depending on how the contract ended:
@@ -349,14 +349,19 @@ export const useTradingStore = create<TradingState>((set, get) => ({
               set({ balance: poc.balance_after });
             }
 
-            get().updateTradeRecord(poc.contract_id, {
-              exitPrice: poc.current_spot,
-              profit: profit,
-              status: won ? 'WON' : 'LOST',
-              exitTime: new Date().toISOString(),
-            });
+            // Fix #13: validate contract_id before updating
+            if (poc.contract_id != null) {
+              get().updateTradeRecord(poc.contract_id, {
+                exitPrice: poc.current_spot,
+                profit: profit,
+                status: won ? 'WON' : 'LOST',
+                exitTime: new Date().toISOString(),
+              });
+            }
           }
         }
+      }).catch((e: Error) => {
+        get().addLog('error', `Failed to subscribe to open contracts: ${e.message}`);
       });
 
       // Subscribe to current market
@@ -425,40 +430,52 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     const market = SYNTHETIC_MARKETS.find((m) => m.symbol === symbol);
     get().addLog('info', `Subscribing to ${market?.name || symbol}...`);
 
-    try {
-      const historyTicks = await api.subscribeToTicks(symbol, (data: any) => {
-        if (data.tick) {
-          const tick: Tick = {
-            epoch: data.tick.epoch,
-            quote: data.tick.quote,
-            symbol: data.tick.symbol,
-            id: data.tick.id,
+    // Remove previous callback to prevent accumulation (#3)
+    if (_activeTickCallback) {
+      api.offSubscription('tick', _activeTickCallback);
+      _activeTickCallback = null;
+    }
+
+    const tickCallback = (data: unknown) => {
+      const d = data as { tick?: { epoch: number; quote: number; symbol: string; id?: string } };
+      if (d.tick) {
+        const tick: Tick = {
+          epoch: d.tick.epoch,
+          quote: d.tick.quote,
+          symbol: d.tick.symbol,
+          id: d.tick.id,
+        };
+
+        set((state) => {
+          const newTicks = [...state.ticks.slice(-200), tick];
+          const newHistory = [...state.tickHistory.slice(-1000), tick];
+          const direction = state.currentPrice > 0
+            ? tick.quote > state.currentPrice ? 'up' : tick.quote < state.currentPrice ? 'down' : 'neutral'
+            : 'neutral';
+
+          // Reset tickCounter before overflow (#1)
+          tickCounter = tickCounter >= 10000 ? 0 : tickCounter + 1;
+
+          return {
+            ticks: newTicks,
+            tickHistory: newHistory,
+            currentPrice: tick.quote,
+            previousPrice: state.currentPrice,
+            priceDirection: direction,
           };
+        });
 
-          set((state) => {
-            const newTicks = [...state.ticks.slice(-200), tick];
-            const newHistory = [...state.tickHistory.slice(-1000), tick];
-            const direction = state.currentPrice > 0
-              ? tick.quote > state.currentPrice ? 'up' : tick.quote < state.currentPrice ? 'down' : 'neutral'
-              : 'neutral';
-
-            tickCounter++;
-
-            return {
-              ticks: newTicks,
-              tickHistory: newHistory,
-              currentPrice: tick.quote,
-              previousPrice: state.currentPrice,
-              priceDirection: direction,
-            };
-          });
-
-          // Auto-trading logic - run every 5 ticks for performance
-          if (get().isAutoTrading && !get().autoTradeCooldown && tickCounter % 5 === 0) {
-            get().processAutoTrade();
-          }
+        // Auto-trading logic - run every 5 ticks for performance
+        if (get().isAutoTrading && !get().autoTradeCooldown && tickCounter % 5 === 0) {
+          get().processAutoTrade();
         }
-      });
+      }
+    };
+
+    _activeTickCallback = tickCallback;
+
+    try {
+      const historyTicks = await api.subscribeToTicks(symbol, tickCallback);
 
       set({ tickHistory: historyTicks });
       if (historyTicks.length > 0) {
@@ -725,7 +742,9 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         const clampedAmount = Math.min(martingaleAmount, maxAmount);
 
         if (clampedAmount > state.balance) {
-          get().addLog('warning', `Martingale amount ($${clampedAmount.toFixed(2)}) exceeds balance. Skipping.`);
+          set({ isSessionPaused: true, pauseReason: `Insufficient balance for Martingale ($${clampedAmount.toFixed(2)} needed, $${state.balance.toFixed(2)} available)`, martingaleStep: 0, tradeAmount: state.baseTradeAmount });
+          get().addLog('error', `🛑 Martingale pausado: balance insuficiente ($${state.balance.toFixed(2)}). Reinicia la sesión para continuar.`);
+          get().playSound('alert');
           return;
         }
 
@@ -916,10 +935,9 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         const tradeProfit = updates.profit || 0;
         const newSessionProfit = state.sessionProfit + (updates.status === 'WON' || updates.status === 'LOST' ? tradeProfit : 0);
 
-        // Update consecutive losses for martingale
-        const newConsecutiveLosses = (updates.status === 'LOST')
-          ? state.consecutiveLosses + 1
-          : (updates.status === 'WON' ? 0 : state.consecutiveLosses);
+        // Fix #7: use history-based consecutive loss count (not incremental state)
+        // allClosed[0] is the most recent trade
+        const newConsecutiveLosses = consecutiveLossCount;
 
         // Reset trade amount on win, keep martingale on loss
         const newTradeAmount = updates.status === 'WON'

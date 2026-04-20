@@ -133,9 +133,14 @@ class DerivAPI {
   private maxReconnectAttempts = 5;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private isConnecting = false;
+  public onReconnectWarning: ((msg: string) => void) | null = null;
 
   connect(appId: string = '1089'): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (this.isConnecting) {
+        reject(new Error('Connection already in progress'));
+        return;
+      }
       if (this.ws?.readyState === WebSocket.OPEN) {
         resolve();
         return;
@@ -181,15 +186,22 @@ class DerivAPI {
       this.ws.onclose = () => {
         this.isConnecting = false;
         this.cleanupPendingRequests();
-        // Auto-reconnect if we had a token
         if (this.token && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
-          const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+          const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 15000);
+          if (this.reconnectAttempts === 3) {
+            this.onReconnectWarning?.(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}. Check your internet connection.`);
+          }
           this.reconnectTimer = setTimeout(() => {
             if (this.token) {
               this.connect(appId).then(() => {
-                this.authorize(this.token).catch(console.error);
-              }).catch(console.error);
+                this.authorize(this.token!).catch(console.error);
+              }).catch(() => {
+                if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                  this.onReconnectWarning?.('Max reconnect attempts reached. Please reconnect manually.');
+                  this.token = null;
+                }
+              });
             }
           }, delay);
         }

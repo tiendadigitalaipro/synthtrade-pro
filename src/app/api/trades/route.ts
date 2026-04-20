@@ -25,20 +25,41 @@ export async function GET(request: Request) {
   }
 }
 
+const VALID_CONTRACT_TYPES = ['CALL', 'PUT', 'RISE', 'FALL'];
+const VALID_STATUSES = ['OPEN', 'WON', 'LOST', 'SOLD'];
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    // Fix #5: validate required fields and types
+    if (!body.symbol || typeof body.symbol !== 'string' || body.symbol.length > 20) {
+      return NextResponse.json({ error: 'Invalid symbol' }, { status: 400 });
+    }
+    if (!VALID_CONTRACT_TYPES.includes(body.contractType)) {
+      return NextResponse.json({ error: 'Invalid contractType' }, { status: 400 });
+    }
+    if (typeof body.entryPrice !== 'number' || body.entryPrice <= 0) {
+      return NextResponse.json({ error: 'Invalid entryPrice' }, { status: 400 });
+    }
+    if (typeof body.amount !== 'number' || body.amount <= 0 || body.amount > 100000) {
+      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+    }
+    const status = body.status || 'OPEN';
+    if (!VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+
     const trade = await db.tradeRecord.create({
       data: {
-        symbol: body.symbol,
+        symbol: body.symbol.trim().toUpperCase(),
         contractType: body.contractType,
         entryPrice: body.entryPrice,
-        strategy: body.strategy,
+        strategy: typeof body.strategy === 'string' ? body.strategy.slice(0, 100) : 'Manual',
         amount: body.amount,
-        payout: body.payout || 0,
-        contractId: body.contractId || null,
-        status: body.status || 'OPEN',
+        payout: typeof body.payout === 'number' && body.payout >= 0 ? body.payout : 0,
+        contractId: body.contractId != null ? Number(body.contractId) : null,
+        status,
       },
     });
 
