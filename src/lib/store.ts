@@ -152,6 +152,7 @@ interface TradingState {
 
 let tickCounter = 0;
 let signalCooldownTimer: ReturnType<typeof setTimeout> | null = null;
+let autoTradeCooldownTimer: ReturnType<typeof setTimeout> | null = null;
 let _activeTickCallback: ((data: unknown) => void) | null = null;
 
 export const useTradingStore = create<TradingState>((set, get) => ({
@@ -549,6 +550,32 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return;
     }
 
+    // Fix #11: re-validar risk limits justo antes de ejecutar (checks atómicos)
+    const riskNow = get().riskSettings;
+    const profitNow = get().sessionProfit;
+    const tradesNow = get().sessionTrades;
+    const lossesNow = get().consecutiveLosses;
+    if (profitNow < -riskNow.maxDailyLoss) {
+      set({ isSessionPaused: true, pauseReason: `Daily loss limit reached (-$${riskNow.maxDailyLoss})` });
+      get().addLog('error', '🛑 Trade cancelado: límite diario alcanzado.');
+      return;
+    }
+    if (profitNow >= riskNow.dailyProfitTarget) {
+      set({ isSessionPaused: true, pauseReason: `Daily profit target reached (+$${riskNow.dailyProfitTarget})` });
+      get().addLog('success', '🎯 Trade cancelado: objetivo diario alcanzado.');
+      return;
+    }
+    if (tradesNow >= riskNow.maxTradesPerSession) {
+      set({ isSessionPaused: true, pauseReason: `Max trades (${riskNow.maxTradesPerSession}) reached` });
+      get().addLog('warning', '🛑 Trade cancelado: máximo de trades por sesión alcanzado.');
+      return;
+    }
+    if (lossesNow >= riskNow.stopAfterConsecutiveLosses) {
+      set({ isSessionPaused: true, pauseReason: `${riskNow.stopAfterConsecutiveLosses} consecutive losses` });
+      get().addLog('error', '🛑 Trade cancelado: límite de pérdidas consecutivas.');
+      return;
+    }
+
     if (state.openTrades.length >= state.maxConcurrentTrades) {
       get().addLog('warning', `Max concurrent trades (${state.maxConcurrentTrades}) reached.`);
       return;
@@ -625,11 +652,12 @@ export const useTradingStore = create<TradingState>((set, get) => ({
             console.error('Failed to save trade to database:', dbError);
           }
 
-          // Set cooldown
+          // Fix #15: cancelar timers anteriores antes de crear nuevos
           set({ autoTradeCooldown: true, signalCooldown: true });
-          setTimeout(() => set({ autoTradeCooldown: false }), state.minTicksBetweenTrades * 500);
+          if (autoTradeCooldownTimer) clearTimeout(autoTradeCooldownTimer);
+          autoTradeCooldownTimer = setTimeout(() => { set({ autoTradeCooldown: false }); autoTradeCooldownTimer = null; }, state.minTicksBetweenTrades * 500);
           if (signalCooldownTimer) clearTimeout(signalCooldownTimer);
-          signalCooldownTimer = setTimeout(() => set({ signalCooldown: false }), 15000);
+          signalCooldownTimer = setTimeout(() => { set({ signalCooldown: false }); signalCooldownTimer = null; }, 15000);
         }
       }
     } catch (error: any) {

@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Fix #12: interface declarada antes de su primer uso
+interface LicenseStatus {
+  valid: boolean;
+  type: string;
+  status: string;
+  clientName: string;
+  expiresAt: string | null;
+  daysLeft?: number;
+  deviceId: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -108,14 +119,4 @@ export async function POST(req: NextRequest) {
     console.error('[License Activate Error]', err);
     return NextResponse.json({ success: false, message: 'Server error during activation.' }, { status: 500 });
   }
-}
-
-interface LicenseStatus {
-  valid: boolean;
-  type: string;
-  status: string;
-  clientName: string;
-  expiresAt: string | null;
-  daysLeft?: number;
-  deviceId: string;
 }

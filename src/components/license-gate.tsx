@@ -18,6 +18,7 @@ export function LicenseGate({ children }: LicenseGateProps) {
   const [activationMsg, setActivationMsg] = useState('');
   const [activationError, setActivationError] = useState('');
 
+  // Fix #14: incluir setters en deps (son estables pero satisface exhaustive-deps)
   const checkLicense = useCallback(async () => {
     setStage('loading');
     try {
@@ -36,7 +37,7 @@ export function LicenseGate({ children }: LicenseGateProps) {
     } catch (err) {
       setStage('error');
     }
-  }, []);
+  }, [setStage, setDeviceId, setLicenseStatus]);
 
   useEffect(() => {
     checkLicense();
