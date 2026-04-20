@@ -587,17 +587,25 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return;
     }
 
-    // ── Determinar contract_type correcto según el mercado ──
-    // Todos los índices sintéticos de Deriv (Volatility, Jump, Boom, Crash, Metals)
-    // usan CALL/PUT para opciones binarias estándar.
-    // RISE/FALL son para un tipo de contrato diferente (Up/Down) y Deriv los rechaza aquí.
-    const derivContractType: string = type === 'CALL' ? 'CALL' : 'PUT';
+    // ── Determinar contract_type y duración correctos según el mercado ──
+    // Boom/Crash usan CALLE/PUTE (European Rise/Fall) con duración en segundos.
+    // Volatility, Jump, Step usan CALL/PUT con duración en ticks.
+    const sym = state.currentSymbol.toUpperCase();
+    const isBoomCrash = sym.startsWith('BOOM') || sym.startsWith('CRASH');
 
-    // Duration: ticks (t) funciona para todos los mercados sintéticos
-    const derivDuration     = state.contractDuration > 0 ? state.contractDuration : 5;
-    const derivDurationUnit = state.contractDurationUnit || 't';
+    const derivContractType: string = isBoomCrash
+      ? (type === 'CALL' ? 'CALLE' : 'PUTE')
+      : (type === 'CALL' ? 'CALL' : 'PUT');
 
-    get().addLog('info', `Requesting ${derivContractType} for ${state.currentSymbol} | ${derivDuration}${derivDurationUnit} | $${effectiveAmount.toFixed(2)}`);
+    // Boom/Crash: si el usuario configuró ticks, convertir a 60s mínimo
+    let derivDuration     = state.contractDuration > 0 ? state.contractDuration : 5;
+    let derivDurationUnit = state.contractDurationUnit || 't';
+    if (isBoomCrash && derivDurationUnit === 't') {
+      derivDuration     = 60;
+      derivDurationUnit = 's';
+    }
+
+    get().addLog('info', `Requesting ${derivContractType} for ${state.currentSymbol} | ${derivDuration}${derivDurationUnit}${isBoomCrash ? ' (Boom/Crash mode)' : ''} | $${effectiveAmount.toFixed(2)}`);
 
     try {
       const proposal = await api.getProposal({
