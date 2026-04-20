@@ -299,11 +299,7 @@ class DerivAPI {
     }
     this.subscriptionHandlers.get('tick')!.add(callback);
 
-    try {
-      await this.sendRequest({ ticks: symbol, subscribe: 1 });
-    } catch (e) {
-      console.error('Failed to subscribe to ticks:', e);
-    }
+    await this.sendRequest({ ticks: symbol, subscribe: 1 });
 
     return historyTicks;
   }
@@ -405,6 +401,12 @@ class DerivAPI {
       await this.sendRequest({ proposal_open_contract: 1, subscribe: 1 });
     } catch (e) {
       console.error('Failed to subscribe to open contracts:', e);
+    }
+  }
+
+  unsubscribeFromBalance() {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ forget_all: 'balance' }));
     }
   }
 

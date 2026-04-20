@@ -94,7 +94,7 @@ export function TradingControls() {
             <Input
               type="number"
               value={contractDuration}
-              onChange={(e) => setContractDuration(parseInt(e.target.value) || 1)}
+              onChange={(e) => setContractDuration(parseInt(e.target.value) || 1, contractDurationUnit)}
               min={1}
               className="h-9 text-sm font-mono bg-background/50 flex-1"
             />

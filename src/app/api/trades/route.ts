@@ -73,10 +73,27 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id, exitPrice, exitTime, profit, payout, status } = body;
 
-    if (!id) {
+    if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'Trade ID is required' }, { status: 400 });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (status !== undefined) {
+      if (!VALID_STATUSES.includes(status)) return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      updateData.status = status;
+    }
+    if (exitPrice !== undefined) {
+      if (typeof exitPrice !== 'number') return NextResponse.json({ error: 'Invalid exitPrice' }, { status: 400 });
+      updateData.exitPrice = exitPrice;
+    }
+    if (exitTime !== undefined) updateData.exitTime = new Date(exitTime);
+    if (profit !== undefined && typeof profit === 'number') updateData.profit = profit;
+    if (payout !== undefined && typeof payout === 'number' && payout >= 0) updateData.payout = payout;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
     const trade = await db.tradeRecord.update({

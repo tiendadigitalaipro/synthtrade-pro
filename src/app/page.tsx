@@ -81,7 +81,7 @@ export default function Home() {
     .replace('R_', 'Vol ')
     .replace('JD', 'Jump ');
 
-  const winRate = totalTrades > 0 ? ((winCount / totalTrades) * 100).toFixed(1) : '0.0';
+  const winRate = totalTrades > 0 ? ((winCount / totalTrades) * 100).toFixed(1) : 'N/A';
 
   return (
     <LicenseGate>
@@ -115,7 +115,7 @@ export default function Home() {
               <div className="w-px h-6 bg-border/30" />
               <div className="text-center">
                 <div className="text-[8px] text-muted-foreground uppercase">Win %</div>
-                <div className="text-xs font-bold font-mono text-foreground">{winRate}%</div>
+                <div className="text-xs font-bold font-mono text-foreground">{winRate === 'N/A' ? 'N/A' : `${winRate}%`}</div>
               </div>
               <div className="w-px h-6 bg-border/30" />
               <div className="text-center">

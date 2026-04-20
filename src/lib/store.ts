@@ -265,8 +265,8 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         balance: auth.authorize.balance,
         currency: auth.authorize.currency,
         loginId: auth.authorize.loginid,
-        isVirtual: auth.authorize.is_virtual === 1 || auth.authorize.is_virtual === true,
-        accountList: auth.authorize.account_list || null,
+        isVirtual: auth.authorize.is_virtual === 1,
+        accountList: (auth.authorize as any).account_list ?? null,
       });
       get().addLog('success', `Authorized: ${auth.authorize.fullname} (${auth.authorize.loginid})`);
       get().addLog('info', `Account Type: ${auth.authorize.is_virtual ? 'DEMO (Virtual)' : 'REAL'} | Currency: ${auth.authorize.currency}`);
@@ -360,7 +360,6 @@ export const useTradingStore = create<TradingState>((set, get) => ({
               });
             }
           }
-        }
       }).catch((e: Error) => {
         get().addLog('error', `Failed to subscribe to open contracts: ${e.message}`);
       });
@@ -393,6 +392,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     const api = getDerivAPI();
     try { api.unsubscribeFromTicks(get().currentSymbol); } catch(e) {}
     try { api.unsubscribeFromOpenContracts(); } catch(e) {}
+    try { api.unsubscribeFromBalance(); } catch(e) {}
     try { api.disconnect(); } catch(e) {}
     set({
       isConnected: false,
@@ -503,7 +503,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         get().playSound('trade');
         return {
           isAutoTrading: newState,
-          sessionStartTime: s.sessionStartTime || new Date(),
+          sessionStartTime: new Date(),
           sessionProfit: 0,
           sessionTrades: 0,
           consecutiveLosses: 0,
@@ -997,7 +997,9 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   loadTradeHistory: async () => {
     try {
       const response = await fetch('/api/trades?limit=100');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const trades = await response.json();
+      if (!Array.isArray(trades)) throw new Error('Invalid response format');
 
       const closedTrades = trades.filter((t: TradeRecord) => t.status === 'WON' || t.status === 'LOST');
       const wins = closedTrades.filter((t: TradeRecord) => t.status === 'WON').length;
@@ -1012,8 +1014,10 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         lossCount: losses,
         totalProfit,
       });
-    } catch (error) {
-      console.error('Failed to load trade history:', error);
+    } catch (error: unknown) {
+      // Fix #18: reportar al log de actividad, no solo consola
+      const msg = error instanceof Error ? error.message : String(error);
+      get().addLog('error', `⚠️ No se pudo cargar el historial de trades: ${msg}`);
     }
   },
 }));
