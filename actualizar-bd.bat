@@ -21,8 +21,10 @@ if not exist "package.json" (
 :: Add IRON_LOCK_ADMIN_KEY to .env if not present
 findstr /C:"IRON_LOCK_ADMIN_KEY" .env >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-  echo IRON_LOCK_ADMIN_KEY=STP-ADMIN-A2K-2024 >> .env
-  echo  [OK] IRON_LOCK_ADMIN_KEY agregado al .env
+  :: Generar una clave aleatoria GUID segura (evita hardcoding)
+  for /f "tokens=*" %%a in ('powershell -Command "[guid]::NewGuid().ToString('N')"') do set ADMIN_KEY=%%a
+  echo IRON_LOCK_ADMIN_KEY=%ADMIN_KEY% >> .env
+  echo  [OK] IRON_LOCK_ADMIN_KEY generado e insertado en .env
 )
 
 echo  Actualizando esquema de base de datos...

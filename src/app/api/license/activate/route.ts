@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// Fix #12: interface declarada antes de su primer uso
-interface LicenseStatus {
+// Fix #9: Reemplazar 'as any' con tipos explícitos usando el schema de Prisma
+import type { License, LicenseType, LicenseStatus } from '@prisma/client';
+
+// Tipo para evitar 'as any' — campos que retornamos al cliente
+interface LicenseResponse {
   valid: boolean;
   type: string;
   status: string;
@@ -55,9 +58,9 @@ export async function POST(req: NextRequest) {
     // Already activated on THIS device — just refresh
     if (license.deviceId === deviceId) {
       const now = new Date();
-      let status: LicenseStatus = {
+      let status: LicenseResponse = {
         valid: true,
-        type: license.type as any,
+        type: license.type,
         status: 'ACTIVE',
         clientName: license.clientName,
         expiresAt: license.expiresAt?.toISOString() ?? null,

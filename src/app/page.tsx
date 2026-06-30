@@ -25,7 +25,6 @@ export default function Home() {
     isSessionPaused,
     currentSymbol,
     currentPrice,
-    sessionProfit,
     loadTradeHistory,
     totalProfit,
     winCount,

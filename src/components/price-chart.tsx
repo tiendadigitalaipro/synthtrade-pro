@@ -11,14 +11,48 @@ import { Area, AreaChart, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 export function PriceChart() {
   const { currentSymbol, currentPrice, ticks, priceDirection } = useTradingStore();
 
+  // Fix #12: Calcular Bollinger/MAs una sola vez en vez de O(n²) por cada punto
   const chartData = useMemo(() => {
     const displayTicks = ticks.slice(-150);
     const prices = displayTicks.map((t) => t.quote);
 
+    // Pre-calcular indicadores una sola vez
+    // Bollinger Bands
+    let bbCache: { upper: number; middle: number; lower: number }[] = [];
+    if (prices.length >= 20) {
+      for (let i = 19; i < prices.length; i++) {
+        const slice = prices.slice(0, i + 1);
+        const periodSlice = slice.slice(-20);
+        const middle = periodSlice.reduce((s, p) => s + p, 0) / 20;
+        const variance = periodSlice.reduce((s, p) => s + Math.pow(p - middle, 2), 0) / 20;
+        const stdDev = Math.sqrt(variance);
+        bbCache.push({
+          upper: middle + 2 * stdDev,
+          middle,
+          lower: middle - 2 * stdDev,
+        });
+      }
+    }
+    // MAs
+    let fastMACache: number[] = [];
+    let slowMACache: number[] = [];
+    if (prices.length >= 5) {
+      for (let i = 4; i < prices.length; i++) {
+        const slice = prices.slice(i - 4, i + 1);
+        fastMACache.push(slice.reduce((s, p) => s + p, 0) / 5);
+      }
+    }
+    if (prices.length >= 20) {
+      for (let i = 19; i < prices.length; i++) {
+        const slice = prices.slice(i - 19, i + 1);
+        slowMACache.push(slice.reduce((s, p) => s + p, 0) / 20);
+      }
+    }
+
     return displayTicks.map((tick, i) => {
-      const bb = i >= 19 ? calculateBollingerBands(prices.slice(0, i + 1), 20, 2) : null;
-      const fastMA = i >= 4 ? calculateSMA(prices.slice(0, i + 1), 5) : null;
-      const slowMA = i >= 19 ? calculateSMA(prices.slice(0, i + 1), 20) : null;
+      const bb = i >= 19 ? bbCache[i - 19] : null;
+      const fastMA = i >= 4 ? fastMACache[i - 4] : null;
+      const slowMA = i >= 19 ? slowMACache[i - 19] : null;
 
       return {
         time: new Date(tick.epoch * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),

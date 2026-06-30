@@ -26,8 +26,13 @@ export function PerformanceStats() {
   } = useTradingStore();
 
   const winRate = totalTrades > 0 ? (winCount / totalTrades) * 100 : 0;
-  const avgWin = winCount > 0 ? (totalProfit / winCount) : 0;
-  const profitFactor = lossCount > 0 ? 'N/A' : totalProfit > 0 ? '∞' : '0';
+  // Fix #7: profitFactor corregido — cálculo real: ganancias / |pérdidas|
+  const totalLosses = totalProfit < 0 ? Math.abs(totalProfit) : 0;
+  const totalWins = totalProfit > 0 ? totalProfit : 0;
+  const profitFactor = lossCount > 0 && totalLosses > 0
+    ? (totalWins / totalLosses).toFixed(2)
+    : lossCount === 0 && winCount > 0 ? '∞'
+    : '0';
 
   const isProfitPositive = totalProfit >= 0;
 

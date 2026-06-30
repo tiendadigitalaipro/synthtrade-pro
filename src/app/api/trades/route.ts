@@ -1,7 +1,21 @@
 import { db } from '@/lib/db';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+// ⚠️ SEGURIDAD: Verificar admin key (misma que license/admin)
+const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY;
+if (!ADMIN_KEY) {
+  throw new Error('IRON_LOCK_ADMIN_KEY no está definida en el entorno.');
+}
+
+function checkAdmin(req: NextRequest): boolean {
+  const auth = req.headers.get('x-admin-key');
+  return auth === ADMIN_KEY;
+}
+
+export async function GET(request: NextRequest) {
+  // Proteger endpoint con autenticación
+  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol');
@@ -28,7 +42,10 @@ export async function GET(request: Request) {
 const VALID_CONTRACT_TYPES = ['CALL', 'PUT', 'RISE', 'FALL'];
 const VALID_STATUSES = ['OPEN', 'WON', 'LOST', 'SOLD'];
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Proteger endpoint con autenticación
+  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const body = await request.json();
 
@@ -70,7 +87,10 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
+  // Proteger endpoint con autenticación
+  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const body = await request.json();
     const { id, exitPrice, exitTime, profit, payout, status } = body;

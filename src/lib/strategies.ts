@@ -27,17 +27,32 @@ export function calculateEMA(prices: number[], period: number): number {
 
 export function calculateRSI(prices: number[], period: number = 14): number {
   if (prices.length < period + 1) return 50;
-  let gains = 0;
-  let losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
+  // Wilder's Smoothing RSI: usa promedio suavizado exponencialmente
+  let avgGain = 0;
+  let avgLoss = 0;
+  // Primer cálculo: SMA de ganancias/pérdidas del período inicial
+  for (let i = 1; i <= period; i++) {
     const change = prices[i] - prices[i - 1];
-    if (change > 0) gains += change;
-    else losses += Math.abs(change);
+    if (change > 0) { avgGain += change; }
+    else { avgLoss += Math.abs(change); }
   }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
+  avgGain /= period;
+  avgLoss /= period;
+  // Smoothing exponencial de Wilder para el resto de los precios
+  for (let i = period + 1; i < prices.length; i++) {
+    const change = prices[i] - prices[i - 1];
+    if (change > 0) {
+      avgGain = (avgGain * (period - 1) + change) / period;
+      avgLoss = (avgLoss * (period - 1)) / period;
+    } else {
+      avgLoss = (avgLoss * (period - 1) + Math.abs(change)) / period;
+      avgGain = (avgGain * (period - 1)) / period;
+    }
+  }
   if (avgLoss === 0) return 100;
-  return 100 - 100 / (1 + avgGain / avgLoss);
+  if (avgGain === 0) return 0;
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
 }
 
 export function calculateStochastic(
@@ -100,18 +115,48 @@ export function calculateMACD(
   signalPeriod = 9
 ): { macd: number; signal: number; histogram: number } {
   if (prices.length < slowPeriod + signalPeriod) return { macd: 0, signal: 0, histogram: 0 };
-  const fastEMA = calculateEMA(prices, fastPeriod);
-  const slowEMA = calculateEMA(prices, slowPeriod);
-  const macdLine = fastEMA - slowEMA;
+  // Fix #11: Optimizar MACD — calcular EMAs incrementalmente, O(n) en vez de O(n²)
+  // Pre-calcular EMA rápida y lenta para TODOS los puntos en una sola pasada
+  const fastMultiplier = 2 / (fastPeriod + 1);
+  const slowMultiplier = 2 / (slowPeriod + 1);
+
+  let fastEma = prices.slice(0, fastPeriod).reduce((s, p) => s + p, 0) / fastPeriod;
+  let slowEma = prices.slice(0, slowPeriod).reduce((s, p) => s + p, 0) / slowPeriod;
+
   const macdValues: number[] = [];
-  for (let i = slowPeriod; i <= prices.length; i++) {
-    const fEma = calculateEMA(prices.slice(0, i), fastPeriod);
-    const sEma = calculateEMA(prices.slice(0, i), slowPeriod);
-    macdValues.push(fEma - sEma);
+
+  for (let i = 0; i < prices.length; i++) {
+    if (i >= fastPeriod) {
+      fastEma = (prices[i] - fastEma) * fastMultiplier + fastEma;
+    } else if (i === fastPeriod - 1) {
+      // fastEma already computed as SMA for first fastPeriod points
+    }
+    if (i >= slowPeriod) {
+      slowEma = (prices[i] - slowEma) * slowMultiplier + slowEma;
+    } else if (i === slowPeriod - 1) {
+      // slowEma already computed as SMA for first slowPeriod points
+    }
+
+    if (i >= slowPeriod) {
+      macdValues.push(fastEma - slowEma);
+    }
   }
-  const signalLine = macdValues.length >= signalPeriod
-    ? calculateEMA(macdValues, signalPeriod)
-    : macdValues[macdValues.length - 1] || 0;
+
+  const currentFast = fastEma;
+  const currentSlow = slowEma;
+  const macdLine = currentFast - currentSlow;
+
+  // Calcular la línea de señal (EMA de los valores MACD)
+  if (macdValues.length < signalPeriod) {
+    return { macd: macdLine, signal: macdValues[macdValues.length - 1] || 0, histogram: 0 };
+  }
+
+  const signalMultiplier = 2 / (signalPeriod + 1);
+  let signalLine = macdValues.slice(0, signalPeriod).reduce((s, v) => s + v, 0) / signalPeriod;
+  for (let i = signalPeriod; i < macdValues.length; i++) {
+    signalLine = (macdValues[i] - signalLine) * signalMultiplier + signalLine;
+  }
+
   return { macd: macdLine, signal: signalLine, histogram: macdLine - signalLine };
 }
 

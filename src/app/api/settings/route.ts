@@ -1,7 +1,21 @@
 import { db } from '@/lib/db';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET() {
+// ⚠️ SEGURIDAD: Verificar admin key (misma que license/admin)
+const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY;
+if (!ADMIN_KEY) {
+  throw new Error('IRON_LOCK_ADMIN_KEY no está definida en el entorno.');
+}
+
+function checkAdmin(req: NextRequest): boolean {
+  const auth = req.headers.get('x-admin-key');
+  return auth === ADMIN_KEY;
+}
+
+export async function GET(req: NextRequest) {
+  // Proteger endpoint con autenticación
+  if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const settings = await db.botSetting.findMany();
     const settingsMap: Record<string, string> = {};
@@ -15,9 +29,12 @@ export async function GET() {
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(req: NextRequest) {
+  // Proteger endpoint con autenticación
+  if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
-    const body: Record<string, string> = await request.json();
+    const body: Record<string, string> = await req.json();
 
     const operations = Object.entries(body).map(([key, value]) =>
       db.botSetting.upsert({

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (license.status === 'BLOCKED') {
       return NextResponse.json({
         valid: false,
-        type: license.type as any,
+        type: license.type,
         status: 'BLOCKED',
         clientName: license.clientName,
         message: 'Your license has been blocked. Contact A2K Digital Studio support.',
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     if (license.status === 'PAUSED') {
       return NextResponse.json({
         valid: false,
-        type: license.type as any,
+        type: license.type,
         status: 'PAUSED',
         clientName: license.clientName,
         message: 'Your license is temporarily paused. Contact A2K Digital Studio support.',
@@ -62,9 +62,9 @@ export async function POST(req: NextRequest) {
           });
         }
         return NextResponse.json({
-          valid: false,
-          type: license.type as any,
-          status: 'EXPIRED',
+            valid: false,
+            type: license.type,
+            status: 'EXPIRED',
           clientName: license.clientName,
           expiresAt: license.expiresAt.toISOString(),
           message: 'Your demo license has expired. Purchase a PRO license to continue.',
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         valid: true,
-        type: license.type as any,
+        type: license.type,
         status: 'ACTIVE',
         clientName: license.clientName,
         expiresAt: license.expiresAt.toISOString(),
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     // PRO license — no expiry
     return NextResponse.json({
       valid: true,
-      type: license.type as any,
+      type: license.type,
       status: 'ACTIVE',
       clientName: license.clientName,
       expiresAt: null,

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY || 'STP-ADMIN-A2K-2024';
+// ⚠️ SEGURIDAD: IRON_LOCK_ADMIN_KEY es OBLIGATORIA — sin fallback hardcodeado
+const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY;
+if (!ADMIN_KEY) {
+  throw new Error('IRON_LOCK_ADMIN_KEY no está definida en el entorno. La API de licencias no funcionará sin esta variable.');
+}
 
 function checkAdmin(req: NextRequest): boolean {
   const auth = req.headers.get('x-admin-key');

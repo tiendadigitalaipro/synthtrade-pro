@@ -652,19 +652,20 @@ function renderTable() {
       PAUSED: `<span class="badge badge-paused">⏸ Paused</span>`,
       BLOCKED: `<span class="badge badge-blocked">✕ Blocked</span>`,
       EXPIRED: `<span class="badge badge-expired">⌛ Expired</span>`,
-    }[lic.status] || `<span class="badge">${lic.status}</span>`;
+    }[lic.status] || `<span class="badge">${escHtml(lic.status)}</span>`;
 
     const typeBadge = lic.type === 'PRO'
       ? `<span class="badge badge-pro">⚡ PRO</span>`
       : `<span class="badge badge-demo">🔬 DEMO</span>`;
 
+    // ⚠️ SEGURIDAD: Usar jsStr() para valores interpolados en onclick (contexto JS string)
     const deviceCell = lic.deviceId
-      ? `<span class="device-mono" title="${lic.deviceId}">${lic.deviceId.slice(0,12)}…${lic.deviceId.slice(-6)}</span>
-         <button class="copy-btn" onclick="copyText('${lic.deviceId}')" title="Copy Device ID">⧉</button>`
+      ? `<span class="device-mono" title="${escHtml(lic.deviceId)}">${escHtml(lic.deviceId.slice(0,12))}…${escHtml(lic.deviceId.slice(-6))}</span>
+         <button class="copy-btn" onclick="copyText('${jsStr(lic.deviceId)}')" title="Copy Device ID">⧉</button>`
       : `<span class="no-device">Not activated</span>`;
 
-    const keyCell = `<span class="key-mono">${lic.key}</span>
-      <button class="copy-btn" onclick="copyText('${lic.key}')" title="Copy Key">⧉</button>`;
+    const keyCell = `<span class="key-mono">${escHtml(lic.key)}</span>
+      <button class="copy-btn" onclick="copyText('${jsStr(lic.key)}')" title="Copy Key">⧉</button>`;
 
     const activatedDate = lic.activatedAt
       ? new Date(lic.activatedAt).toLocaleDateString('es-VE')
@@ -689,14 +690,18 @@ function renderTable() {
     const isBlocked = lic.status === 'BLOCKED';
     const isActive = lic.status === 'ACTIVE';
 
+    // ⚠️ SEGURIDAD: Todos los valores dinámicos en onclick usan jsStr()
+    const escapedId = jsStr(lic.id);
+    const escapedClient = jsStr(lic.clientName);
+
     const actionBtns = `
       <div class="actions">
-        <button class="btn-action btn-edit" onclick="openEdit('${lic.id}')">✏ Edit</button>
-        ${isActive ? `<button class="btn-action btn-pause" onclick="confirmAction('${lic.id}','PAUSED','Pause license for ${escHtml(lic.clientName)}?')">⏸</button>` : ''}
-        ${(isPaused || isActive) ? `<button class="btn-action btn-block" onclick="confirmAction('${lic.id}','BLOCKED','Block license for ${escHtml(lic.clientName)}?')">✕ Block</button>` : ''}
-        ${(isPaused || isBlocked) ? `<button class="btn-action btn-unblock" onclick="confirmAction('${lic.id}','ACTIVE','Reactivate license for ${escHtml(lic.clientName)}?')">✓ Unblock</button>` : ''}
-        ${lic.deviceId ? `<button class="btn-action btn-clear" onclick="clearDevice('${lic.id}','${escHtml(lic.clientName)}')">⌫ Reset Device</button>` : ''}
-        <button class="btn-action btn-delete" onclick="deleteLicense('${lic.id}','${escHtml(lic.clientName)}')">🗑</button>
+        <button class="btn-action btn-edit" onclick="openEdit('${escapedId}')">✏ Edit</button>
+        ${isActive ? `<button class="btn-action btn-pause" onclick="confirmAction('${escapedId}','PAUSED','Pause license for ${escHtml(lic.clientName)}?')">⏸</button>` : ''}
+        ${(isPaused || isActive) ? `<button class="btn-action btn-block" onclick="confirmAction('${escapedId}','BLOCKED','Block license for ${escHtml(lic.clientName)}?')">✕ Block</button>` : ''}
+        ${(isPaused || isBlocked) ? `<button class="btn-action btn-unblock" onclick="confirmAction('${escapedId}','ACTIVE','Reactivate license for ${escHtml(lic.clientName)}?')">✓ Unblock</button>` : ''}
+        ${lic.deviceId ? `<button class="btn-action btn-clear" onclick="clearDevice('${escapedId}','${escapedClient}')">⌫ Reset Device</button>` : ''}
+        <button class="btn-action btn-delete" onclick="deleteLicense('${escapedId}','${escapedClient}')">🗑</button>
       </div>
     `;
 
@@ -848,8 +853,14 @@ function copyText(text) {
   navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'info'));
 }
 
+// ⚠️ SEGURIDAD: Escapar valores para HTML (evita XSS en innerHTML)
 function escHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ⚠️ SEGURIDAD: Escapar valores para usar dentro de atributos onclick (contexto JS string)
+function jsStr(str) {
+  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 }
 
 let toastTimer;

@@ -21,7 +21,6 @@ export function ConnectionPanel() {
     isConnected,
     isAuthorized,
     isConnecting,
-    apiToken,
     appId,
     balance,
     currency,

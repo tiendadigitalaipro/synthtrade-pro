@@ -59,9 +59,14 @@ pause
 
 :: PASO 3 - Crear .env
 echo  [PASO 3] Creando configuracion de base de datos...
+echo  [PASO 3] Generando clave de administrador segura...
+
+:: Generar una clave aleatoria GUID para el admin key (evita hardcoding inseguro)
+for /f "tokens=*" %%a in ('powershell -Command "[guid]::NewGuid().ToString('N')"') do set ADMIN_KEY=%%a
+
 (
   echo DATABASE_URL=file:./db/custom.db
-  echo IRON_LOCK_ADMIN_KEY=STP-ADMIN-A2K-2024
+  echo IRON_LOCK_ADMIN_KEY=%ADMIN_KEY%
 ) > .env
 if not exist "db" mkdir db
 echo  Archivo .env creado: OK

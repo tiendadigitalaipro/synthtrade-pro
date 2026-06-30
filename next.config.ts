@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  reactStrictMode: false,
+  reactStrictMode: true, // Fix #15: Habilitar modo estricto para detectar problemas de renderizado
 };
 
 export default nextConfig;

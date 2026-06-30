@@ -9,7 +9,7 @@
 #property description "SynthTrade Pro EA — Automated trading for Deriv Synthetic Indices"
 #property description "Strategies: RSI+Stoch, MA Cross+MACD, Bollinger+RSI, Tick Counter, Anti-Spike"
 #property description "Contact: wa.me/584164117331 | a2kdigitalstudio2025@gmail.com"
-#property strict
+// Nota: #property strict no existe en MQL5 — eliminado (Fix #16)
 
 #include <Trade\Trade.mqh>
 #include <Trade\PositionInfo.mqh>
@@ -563,11 +563,11 @@ void UpdateTickCounter()
       g_LastSpikeTime   = TimeCurrent();
       g_AntiSpikeWait   = 0;
 
-      // Determine direction of spike
+      // Fix #17: Anti-Spike con lógica simétrica — ambos mercados responden igual
       if(close0 < g_PrevClose)
-        g_LastSignal = (g_MarketType == MARKET_BOOM) ? 1 : 0;  // Boom down spike → BUY
+        g_LastSignal = 1;  // Spike bajista → BUY (reversión alcista)
       else
-        g_LastSignal = (g_MarketType == MARKET_CRASH) ? -1 : 0; // Crash up spike → SELL
+        g_LastSignal = -1; // Spike alcista → SELL (reversión bajista)
 
       Print("SPIKE detected! Change: ", DoubleToString(changePct * 100, 2), "% | Direction stored: ", g_LastSignal);
      }
