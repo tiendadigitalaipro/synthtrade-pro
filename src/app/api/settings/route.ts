@@ -2,11 +2,7 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 // ⚠️ SEGURIDAD: Verificar admin key (misma que license/admin)
-const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY;
-if (!ADMIN_KEY) {
-  throw new Error('IRON_LOCK_ADMIN_KEY no está definida en el entorno.');
-}
-
+const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY || '';
 function checkAdmin(req: NextRequest): boolean {
   const auth = req.headers.get('x-admin-key');
   return auth === ADMIN_KEY;
