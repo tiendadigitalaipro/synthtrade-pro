@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 // Fix #9: Reemplazar 'as any' con tipos explícitos usando el schema de Prisma
-import type { License, LicenseType, LicenseStatus } from '@prisma/client';
+import type { License } from '@prisma/client';
 
 // Tipo para evitar 'as any' — campos que retornamos al cliente
 interface LicenseResponse {
