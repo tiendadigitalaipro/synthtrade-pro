@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 // ⚠️ SEGURIDAD: IRON_LOCK_ADMIN_KEY es OBLIGATORIA — sin fallback hardcodeado
-const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY;
-if (!ADMIN_KEY) {
-  throw new Error('IRON_LOCK_ADMIN_KEY no está definida en el entorno. La API de licencias no funcionará sin esta variable.');
+const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY || '';
+
+function envReady(): boolean {
+  if (!ADMIN_KEY) {
+    console.error('IRON_LOCK_ADMIN_KEY no está definida — la API de licencias no funcionará');
+    return false;
+  }
+  return true;
 }
 
 function checkAdmin(req: NextRequest): boolean {
+  if (!envReady()) return false;
   const auth = req.headers.get('x-admin-key');
   return auth === ADMIN_KEY;
 }
