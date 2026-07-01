@@ -242,8 +242,8 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return;
     }
 
-    // Basic format validation — Deriv tokens are 15 alphanumeric chars
-    if (stateToken.length < 10 || stateToken.length > 64) {
+    // Basic format validation — Deriv tokens are 15+ chars (pat_ tokens can be longer)
+    if (stateToken.length < 10 || (stateToken.length > 100 && !stateToken.startsWith('pat_'))) {
       set({ connectionError: `Invalid token length (${stateToken.length} chars). Deriv tokens are usually 15 characters. Create a new token at app.deriv.com/account/api-token` });
       return;
     }
