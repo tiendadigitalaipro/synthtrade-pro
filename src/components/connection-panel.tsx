@@ -30,14 +30,13 @@ export function ConnectionPanel() {
     disconnect,
   } = useTradingStore();
 
-  const DERIV_APP_ID = '33I5gRnFDuizEhfuvaiKY';
-  const [showManual, setShowManual] = useState(false);
+  const DERIV_APP_ID = '16303';
+  const [showManual, setShowManual] = useState(true);
   const [tokenInput, setTokenInput] = useState('');
   const [showToken, setShowToken] = useState(false);
 
   const handleOAuthLogin = () => {
     localStorage.setItem('synthtrade_app_id', DERIV_APP_ID);
-    // prompt=login fuerza nueva autenticacion aunque ya este logueado, garantizando el redirect
     window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&redirect_uri=https://synthtrade-pro.vercel.app&l=EN&brand=deriv&response_type=token&prompt=login`;
   };
 
@@ -96,60 +95,47 @@ export function ConnectionPanel() {
         {!isConnected && (
           <div className="space-y-2.5">
 
-            {/* OAuth Login button — un solo clic */}
-            <Button
-              onClick={handleOAuthLogin}
-              disabled={isConnecting}
-              className="w-full h-10 text-sm bg-[#FF444F] hover:bg-[#e03d47] text-white font-semibold"
-            >
-              {isConnecting ? (
-                <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> Conectando...</>
-              ) : (
-                <><ExternalLink className="h-4 w-4 mr-2" /> Conectar con Deriv</>
-              )}
-            </Button>
-            <p className="text-[10px] text-center text-muted-foreground/50">
-              Inicia sesión en Deriv → autoriza → listo
-            </p>
+            {/* Instrucciones rápidas */}
+            <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5 text-[10px] text-blue-300 space-y-1">
+              <p className="font-semibold text-blue-200">Cómo obtener tu token:</p>
+              <ol className="list-decimal pl-3 space-y-0.5">
+                <li>Ve a <span className="font-mono text-amber-300">home.deriv.com</span></li>
+                <li>Menú → Perfil → <strong>API Token</strong></li>
+                <li>Crea token con todos los permisos</li>
+                <li>Copia y pégalo abajo</li>
+              </ol>
+            </div>
 
-            {/* Manual token (collapsed) */}
-            <button
-              onClick={() => setShowManual(!showManual)}
-              className="w-full flex items-center justify-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground py-0.5"
-            >
-              <ChevronDown className={`h-3 w-3 transition-transform ${showManual ? 'rotate-180' : ''}`} />
-              {showManual ? 'Ocultar token manual' : 'Usar token manual (avanzado)'}
-            </button>
-
-            {showManual && (
-              <div className="space-y-2 rounded-lg bg-secondary/20 border border-border/20 p-2.5">
-                <p className="text-[10px] text-amber-400/80">Solo si el Login OAuth no funciona</p>
-                <div className="relative">
-                  <Input
-                    type={showToken ? 'text' : 'password'}
-                    placeholder="Pega el token aqui"
-                    value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleManualConnect()}
-                    className="pr-16 h-8 text-xs bg-background/50 font-mono"
-                  />
-                  <button
-                    onClick={() => setShowToken(!showToken)}
-                    className="absolute right-2.5 top-2 text-[10px] text-muted-foreground hover:text-foreground"
-                  >
-                    {showToken ? 'Ocultar' : 'Ver'}
-                  </button>
-                </div>
-                <Button
-                  onClick={handleManualConnect}
-                  disabled={isConnecting || !tokenInput.trim()}
-                  size="sm"
-                  className="w-full h-7 text-[10px] bg-emerald-700 hover:bg-emerald-600"
+            {/* Token input — principal */}
+            <div className="space-y-1.5">
+              <div className="relative">
+                <Input
+                  type={showToken ? 'text' : 'password'}
+                  placeholder="Pega tu token API aquí (pat_...)"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleManualConnect()}
+                  className="pr-14 h-9 text-xs bg-background/50 font-mono border-border/50"
+                />
+                <button
+                  onClick={() => setShowToken(!showToken)}
+                  className="absolute right-2.5 top-2.5 text-[10px] text-muted-foreground hover:text-foreground"
                 >
-                  <Wifi className="h-3 w-3 mr-1.5" /> Conectar con token
-                </Button>
+                  {showToken ? 'Ocultar' : 'Ver'}
+                </button>
               </div>
-            )}
+              <Button
+                onClick={handleManualConnect}
+                disabled={isConnecting || !tokenInput.trim()}
+                className="w-full h-9 text-sm bg-[#FF444F] hover:bg-[#e03d47] text-white font-semibold"
+              >
+                {isConnecting ? (
+                  <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> Conectando...</>
+                ) : (
+                  <><Wifi className="h-4 w-4 mr-2" /> Conectar con Deriv</>
+                )}
+              </Button>
+            </div>
           </div>
         )}
 
