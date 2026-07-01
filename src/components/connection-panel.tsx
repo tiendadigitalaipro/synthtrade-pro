@@ -35,6 +35,7 @@ export function ConnectionPanel() {
   const [showToken, setShowToken] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [appIdInput, setAppIdInput] = useState('1089');
+  const isPatToken = tokenInput.trim().startsWith('pat_');
 
   const handleConnect = () => {
     const cleanToken = tokenInput.replace(/[\s\u200B\u200C\u200D\uFEFF'"]/g, '');
@@ -156,6 +157,16 @@ export function ConnectionPanel() {
           </Button>
         )}
 
+        {/* Advertencia token pat_ */}
+        {isPatToken && !isConnected && (
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-2">
+            <p className="text-[11px] text-amber-400 leading-relaxed">
+              ⚠️ <strong>Token pat_ detectado.</strong> Este formato puede no conectar con app_id 1089.
+              Si falla: ve a <strong>app.deriv.com/account/api-token</strong>, elimina este token y crea uno nuevo sin seleccionar &quot;OAuth&quot;.
+            </p>
+          </div>
+        )}
+
         {/* Error */}
         {connectionError && (
           <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-2">
@@ -208,11 +219,13 @@ export function ConnectionPanel() {
                 <li>Presiona <strong className="text-foreground">Connect</strong>.</li>
               </ol>
               <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-amber-300 text-xs space-y-1">
-                <p>⚠️ <strong>Si ves "token inválido":</strong> Asegúrate de tener los 4 permisos activos. Si el token empieza con <span className="font-mono">pat_</span>, también ingresa tu App ID personal en el campo avanzado de abajo.</p>
-                <p>🆔 <strong>Registrar App ID propio:</strong>{' '}
-                  <a href="https://app.deriv.com/apps/" target="_blank" rel="noreferrer" className="text-emerald-400 underline">app.deriv.com/apps</a>
-                  {' '}→ Register app → copia el ID → pégalo en el campo App ID.
-                </p>
+                <p>⚠️ <strong>Si ves &quot;token inválido&quot;:</strong> El token <span className="font-mono text-red-400">pat_xxx</span> es formato OAuth y puede no funcionar. En su lugar:</p>
+                <ol className="list-decimal pl-4 space-y-1 mt-1">
+                  <li>Ve a <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noreferrer" className="text-emerald-400 underline">app.deriv.com/account/api-token</a></li>
+                  <li>Si ves un token <span className="font-mono">pat_xxx</span>, <strong>elimínalo</strong></li>
+                  <li>Crea uno nuevo — ponle nombre &quot;SynthTrade&quot; — activa los 4 permisos</li>
+                  <li>El nuevo token <strong>NO debe empezar con pat_</strong> — será una cadena de letras/números</li>
+                </ol>
               </div>
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 text-yellow-400 text-xs">
                 ⚠️ Nunca compartas tu token API. El bot se conecta directamente a los servidores de Deriv mediante WebSocket encriptado.

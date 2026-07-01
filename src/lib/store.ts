@@ -377,7 +377,12 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         errMsg.toLowerCase().includes('the token is invalid') ||
         errMsg.toLowerCase().includes('token is invalid')
       ) {
-        errMsg = '❌ Token inválido. Pasos: 1) Ve a app.deriv.com → Gestión de API → Ficha API  2) Crea un token NUEVO con permisos: Read + Trade + Payments + Admin  3) Copia el token completo (empieza con pat_)  4) Pégalo aquí sin espacios';
+        const isPat = stateToken.startsWith('pat_');
+        if (isPat) {
+          errMsg = '❌ Token pat_ rechazado por Deriv. Solución: Ve a app.deriv.com/account/api-token → ELIMINA el token pat_ → Crea uno NUEVO → en "Nombre del token" pon cualquier nombre → activa los 4 permisos (Read, Trade, Payments, Admin) → el nuevo token empieza con letras/números sin "pat_" → pégalo aquí.';
+        } else {
+          errMsg = '❌ Token inválido. Pasos: 1) Ve a app.deriv.com/account/api-token  2) Crea un token NUEVO con los 4 permisos: Read + Trade + Payments + Admin  3) Copia el token completo  4) Pégalo aquí sin espacios';
+        }
       } else if (errMsg.includes('RateLimit')) {
         errMsg = '⏳ Demasiados intentos. Espera 1 minuto e intenta de nuevo.';
       } else if (errMsg.includes('timeout') || errMsg.includes('Timeout')) {
