@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
     } catch {
       const L = (await import('@/lib/license-store')).default;
       updated = L.update(license.id, {
-        deviceId: updateData.deviceId?.toISOString?.() || String(updateData.deviceId),
-        activatedAt: updateData.activatedAt?.toISOString?.() || String(updateData.activatedAt),
+        deviceId: String(updateData.deviceId),
+        activatedAt: updateData.activatedAt instanceof Date ? updateData.activatedAt.toISOString() : String(updateData.activatedAt || new Date().toISOString()),
         expiresAt: typeof updateData.expiresAt === 'string' ? updateData.expiresAt : updateData.expiresAt?.toISOString?.() || null,
         status: 'ACTIVE',
       });
