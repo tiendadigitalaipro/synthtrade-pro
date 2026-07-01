@@ -233,8 +233,12 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   // Actions
   connect: async (token?: string, appId?: string) => {
     const api = getDerivAPI();
-    // Clean token: strip all whitespace, invisible chars, and quotes
-    const rawToken = get().apiToken || token || '';
+    // FIX CRÍTICO: el token NUEVO (parámetro) tiene prioridad sobre el token
+    // guardado en el estado. Antes era al revés (get().apiToken || token), lo
+    // que hacía que tras un primer intento fallido TODOS los tokens nuevos
+    // fueran ignorados y se reenviara el token viejo → Deriv devolvía
+    // InvalidToken eternamente hasta recargar la página.
+    const rawToken = token || get().apiToken || '';
     const stateToken = rawToken.replace(/[\s\u200B\u200C\u200D\uFEFF'"]/g, '');
 
     if (!stateToken) {
@@ -242,14 +246,17 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return;
     }
 
-    // Basic format validation — Deriv tokens are 15+ chars (pat_ tokens can be longer)
-    if (stateToken.length < 10 || (stateToken.length > 100 && !stateToken.startsWith('pat_'))) {
-      set({ connectionError: `Invalid token length (${stateToken.length} chars). Deriv tokens are usually 15 characters. Create a new token at app.deriv.com/account/api-token` });
+    // Validación de formato: los API tokens clásicos de Deriv tienen ~15
+    // caracteres y los tokens de sesión OAuth empiezan con "a1-" (~32 chars).
+    // NOTA: Deriv NO usa prefijo "pat_" — eso era una suposición errónea.
+    if (stateToken.length < 8 || stateToken.length > 128) {
+      set({ connectionError: `Token con longitud inválida (${stateToken.length} caracteres). Crea un token nuevo en app.deriv.com/account/api-token y pégalo completo, sin espacios.` });
       return;
     }
 
     const effectiveAppId = appId || get().appId || '1089';
-    set({ isConnecting: true, connectionError: null, apiToken: stateToken, appId: effectiveAppId });
+    // NO guardar el token en el estado todavía — solo cuando authorize() tenga éxito.
+    set({ isConnecting: true, connectionError: null, appId: effectiveAppId });
     get().addLog('info', `Connecting to Deriv (app_id: ${effectiveAppId})...`);
 
     try {
@@ -262,6 +269,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       const auth = await api.authorize(stateToken);
       set({
         isAuthorized: true,
+        apiToken: stateToken, // ← solo se persiste tras autorización exitosa
         balance: auth.authorize.balance,
         currency: auth.authorize.currency,
         loginId: auth.authorize.loginid,
@@ -277,6 +285,12 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         if (balResponse.balance) {
           set({ balance: balResponse.balance.balance, currency: balResponse.balance.currency });
         }
+        // Actualizaciones en tiempo real del saldo
+        api.onBalanceUpdate((data: any) => {
+          if (data.balance && typeof data.balance.balance === 'number') {
+            set({ balance: data.balance.balance, currency: data.balance.currency || get().currency });
+          }
+        });
       } catch (e) {
         // Balance subscription might fail, that's ok
       }
@@ -387,8 +401,10 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       set({
         isConnecting: false,
         isConnected: false,
+        apiToken: '', // ← limpiar SIEMPRE en fallo: el próximo intento usará el token recién pegado
         connectionError: errMsg,
       });
+      try { api.disconnect(); } catch (e) { /* noop */ }
       get().addLog('error', `Connection failed: ${error.message}`);
       get().playSound('alert');
     }

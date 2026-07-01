@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     }
     const settings = await db.botSetting.findMany();
     const map: Record<string, string> = {};
-    settings.forEach(s => { map[s.key] = s.value; });
+    settings.forEach((s: { key: string; value: string }) => { map[s.key] = s.value; });
     return NextResponse.json(map);
   } catch (error) {
     console.error('Error fetching settings:', error);

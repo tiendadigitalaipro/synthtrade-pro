@@ -20,7 +20,7 @@ async function main() {
 
   console.log('\nLicencias disponibles:');
   const all = await db.license.findMany({ select: { key: true, type: true, status: true } });
-  all.forEach(l => console.log(`  ${l.key} | ${l.type} | ${l.status}`));
+  all.forEach((l: { key: string; type: string; status: string }) => console.log(`  ${l.key} | ${l.type} | ${l.status}`));
 }
 
 main()

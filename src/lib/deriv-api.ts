@@ -160,8 +160,16 @@ class DerivAPI {
       }
 
       const connectionTimer = setTimeout(() => {
-        reject(new Error('Connection timeout'));
         this.isConnecting = false;
+        // FIX: cerrar el socket huérfano — antes quedaba abierto y podía
+        // disparar onopen DESPUÉS del reject, dejando la UI en estado inconsistente.
+        if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+          this.ws.onopen = null;
+          this.ws.onclose = null;
+          try { this.ws.close(); } catch { /* noop */ }
+          this.ws = null;
+        }
+        reject(new Error('Connection timeout'));
       }, 15000);
 
       this.ws.onopen = () => {
@@ -236,6 +244,10 @@ class DerivAPI {
       this.emitSubscription('proposal_open_contract', data);
     } else if (data.msg_type === 'transaction') {
       this.emitSubscription('transaction', data);
+    } else if (data.msg_type === 'balance') {
+      // FIX: las actualizaciones de balance (subscribe:1) no se emitían —
+      // el saldo en pantalla quedaba congelado tras el primer valor.
+      this.emitSubscription('balance', data);
     }
   }
 
@@ -275,10 +287,13 @@ class DerivAPI {
   }
 
   async authorize(token: string): Promise<AuthorizeResponse> {
-    this.token = token;
+    // FIX: guardar el token SOLO si Deriv lo acepta. Antes se guardaba antes
+    // de la petición, y si el token era inválido el auto-reconnect entraba en
+    // bucle reenviando el token malo (InvalidToken repetido + RateLimit).
     const response = await this.sendRequest({
       authorize: token,
     });
+    this.token = token;
     return response as AuthorizeResponse;
   }
 
@@ -286,6 +301,14 @@ class DerivAPI {
     const response = await this.sendRequest({ balance: 1, subscribe: 1 });
     // The first response is the initial balance, but subscribe gives us ongoing updates
     return response as BalanceResponse;
+  }
+
+  // Registra un callback para las actualizaciones de balance en tiempo real
+  onBalanceUpdate(callback: MessageHandler) {
+    if (!this.subscriptionHandlers.has('balance')) {
+      this.subscriptionHandlers.set('balance', new Set());
+    }
+    this.subscriptionHandlers.get('balance')!.add(callback);
   }
 
   async subscribeToTicks(symbol: string, callback: MessageHandler): Promise<Tick[]> {

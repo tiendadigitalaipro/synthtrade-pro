@@ -111,7 +111,7 @@ export function ConnectionPanel() {
               <div className="relative">
                 <Input
                   type={showToken ? 'text' : 'password'}
-                  placeholder="Pega tu token API aquí (pat_...)"
+                  placeholder="Pega tu token API de Deriv aquí"
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualConnect()}
