@@ -34,13 +34,14 @@ export function ConnectionPanel() {
   const [tokenInput, setTokenInput] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [appIdInput, setAppIdInput] = useState('1089');
+  const [appIdInput, setAppIdInput] = useState('');
   const isPatToken = tokenInput.trim().startsWith('pat_');
 
   const handleConnect = () => {
     const cleanToken = tokenInput.replace(/[\s\u200B\u200C\u200D\uFEFF'"]/g, '');
-    if (cleanToken) {
-      connect(cleanToken, appIdInput.trim() || '1089');
+    const cleanAppId = appIdInput.trim();
+    if (cleanToken && cleanAppId) {
+      connect(cleanToken, cleanAppId);
     }
   };
 
@@ -89,50 +90,51 @@ export function ConnectionPanel() {
         {/* Token Input */}
         {!isConnected && (
           <div className="space-y-2">
-            <div className="relative">
-              <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+
+            {/* App ID — REQUERIDO, siempre visible */}
+            <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2 space-y-1.5">
+              <p className="text-[10px] text-blue-300 font-semibold">📋 Paso 1 — Tu App ID de Deriv</p>
               <Input
-                type={showToken ? 'text' : 'password'}
-                placeholder="Pega tu token API de Deriv"
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                className="pl-9 pr-16 h-9 text-xs bg-background/50"
+                type="text"
+                placeholder="Ej: 12345  (obtenerlo en app.deriv.com/apps)"
+                value={appIdInput}
+                onChange={(e) => setAppIdInput(e.target.value)}
+                className="h-8 text-xs bg-background/50 font-mono"
               />
-              <button
-                onClick={() => setShowToken(!showToken)}
-                className="absolute right-2.5 top-2 text-[10px] text-muted-foreground hover:text-foreground px-1"
-              >
-                {showToken ? 'Ocultar' : 'Ver'}
-              </button>
+              <p className="text-[10px] text-blue-400/70">
+                Gratis en{' '}
+                <a href="https://app.deriv.com/apps/" target="_blank" rel="noreferrer" className="underline text-blue-300">
+                  app.deriv.com/apps
+                </a>
+                {' '}→ &quot;Register app&quot; → copia el número App ID
+              </p>
             </div>
 
-            {/* Advanced: App ID */}
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground w-full"
-            >
-              {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              App ID avanzado (por defecto: 1089)
-            </button>
-            {showAdvanced && (
-              <div className="space-y-1">
+            {/* Token */}
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground font-semibold">📋 Paso 2 — Token API</p>
+              <div className="relative">
+                <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  type="text"
-                  placeholder="App ID (ej: 1089)"
-                  value={appIdInput}
-                  onChange={(e) => setAppIdInput(e.target.value)}
-                  className="h-8 text-xs bg-background/50 font-mono"
+                  type={showToken ? 'text' : 'password'}
+                  placeholder="Pega tu token pat_xxx de Deriv"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                  className="pl-9 pr-16 h-9 text-xs bg-background/50"
                 />
-                <p className="text-[10px] text-muted-foreground">
-                  Usa 1089 para cuentas estándar. Si tu token fue creado para otra app, ingresa ese ID aquí.
-                </p>
+                <button
+                  onClick={() => setShowToken(!showToken)}
+                  className="absolute right-2.5 top-2 text-[10px] text-muted-foreground hover:text-foreground px-1"
+                >
+                  {showToken ? 'Ocultar' : 'Ver'}
+                </button>
               </div>
-            )}
+            </div>
 
             <Button
               onClick={handleConnect}
-              disabled={isConnecting || !tokenInput.trim()}
+              disabled={isConnecting || !tokenInput.trim() || !appIdInput.trim()}
               className="w-full h-9 text-xs bg-emerald-600 hover:bg-emerald-700"
             >
               {isConnecting ? (
@@ -190,45 +192,31 @@ export function ConnectionPanel() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 text-sm text-muted-foreground">
-              <ol className="list-decimal pl-4 space-y-3">
-                <li>
-                  <strong className="text-foreground">Inicia sesión</strong> en{' '}
-                  <a href="https://app.deriv.com" target="_blank" rel="noreferrer" className="text-emerald-400 underline">
-                    app.deriv.com
-                  </a>
-                  {' '}con tu cuenta Demo o Real.
-                </li>
-                <li>
-                  Ve a:{' '}
-                  <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noreferrer" className="text-emerald-400 underline font-mono text-xs">
-                    app.deriv.com/account/api-token
-                  </a>
-                </li>
-                <li>
-                  <strong className="text-foreground">Crea un nuevo token</strong> — nombre: "SynthTrade" — activa los 4 permisos:
-                  <ul className="list-none pl-2 mt-2 space-y-1">
-                    <li className="text-emerald-400">✅ Read</li>
-                    <li className="text-emerald-400">✅ Trade</li>
-                    <li className="text-emerald-400">✅ Payments</li>
-                    <li className="text-emerald-400">✅ Admin</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong className="text-foreground">Copia el token completo</strong> que aparece. Puede ser corto (~15 chars) o largo (empieza con <span className="font-mono text-amber-400">pat_</span>). Pégalo arriba sin espacios.
-                </li>
-                <li>Presiona <strong className="text-foreground">Connect</strong>.</li>
-              </ol>
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-amber-300 text-xs space-y-1">
-                <p>⚠️ <strong>Si ves &quot;token inválido&quot;:</strong> El token <span className="font-mono text-red-400">pat_xxx</span> es formato OAuth y puede no funcionar. En su lugar:</p>
+
+              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-blue-300 text-xs space-y-1">
+                <p className="font-bold text-blue-200">🔵 PASO 1 — Registra tu App (gratis, solo una vez)</p>
                 <ol className="list-decimal pl-4 space-y-1 mt-1">
-                  <li>Ve a <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noreferrer" className="text-emerald-400 underline">app.deriv.com/account/api-token</a></li>
-                  <li>Si ves un token <span className="font-mono">pat_xxx</span>, <strong>elimínalo</strong></li>
-                  <li>Crea uno nuevo — ponle nombre &quot;SynthTrade&quot; — activa los 4 permisos</li>
-                  <li>El nuevo token <strong>NO debe empezar con pat_</strong> — será una cadena de letras/números</li>
+                  <li>Ve a <a href="https://app.deriv.com/apps/" target="_blank" rel="noreferrer" className="text-emerald-400 underline">app.deriv.com/apps</a></li>
+                  <li>Clic en <strong>&quot;Register app&quot;</strong></li>
+                  <li>Nombre: <strong>&quot;SynthTrade&quot;</strong> — marca los 4 scopes (Read, Trade, Payments, Admin)</li>
+                  <li>Copia el número <strong>App ID</strong> que aparece (ej: 12345)</li>
+                  <li>Pégalo en el campo App ID de la pantalla de conexión</li>
                 </ol>
               </div>
+
+              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-emerald-300 text-xs space-y-1">
+                <p className="font-bold text-emerald-200">🟢 PASO 2 — Crea tu Token API</p>
+                <ol className="list-decimal pl-4 space-y-1 mt-1">
+                  <li>Ve a <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noreferrer" className="text-emerald-400 underline">app.deriv.com/account/api-token</a></li>
+                  <li>Nombre: <strong>&quot;SynthTrade&quot;</strong> — activa los 4 permisos: Read, Trade, Payments, Admin</li>
+                  <li>Clic en <strong>&quot;Create&quot;</strong></li>
+                  <li>Copia el token completo (empieza con <span className="font-mono text-amber-400">pat_</span>)</li>
+                  <li>Pégalo en el campo Token de la pantalla de conexión</li>
+                </ol>
+              </div>
+
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 text-yellow-400 text-xs">
-                ⚠️ Nunca compartas tu token API. El bot se conecta directamente a los servidores de Deriv mediante WebSocket encriptado.
+                ⚠️ Nunca compartas tu token ni tu App ID. La conexión va directamente a Deriv por WebSocket encriptado.
               </div>
             </div>
           </DialogContent>
