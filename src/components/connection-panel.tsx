@@ -30,7 +30,7 @@ export function ConnectionPanel() {
     disconnect,
   } = useTradingStore();
 
-  const DERIV_APP_ID = '16303';
+  const DERIV_APP_ID = '1089'; // App ID publico oficial de Deriv para desarrollo/pruebas
   const [showManual, setShowManual] = useState(true);
   const [tokenInput, setTokenInput] = useState('');
   const [showToken, setShowToken] = useState(false);

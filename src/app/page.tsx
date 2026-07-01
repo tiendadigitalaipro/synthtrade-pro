@@ -40,7 +40,7 @@ export default function Home() {
 
   // OAuth callback: Deriv puede devolver token en query params (?token1=xxx) O hash (#token1=xxx)
   useEffect(() => {
-    const savedAppId = localStorage.getItem('synthtrade_app_id') || '16303';
+    const savedAppId = localStorage.getItem('synthtrade_app_id') || '1089';
 
     // Verificar query params primero
     const queryParams = new URLSearchParams(window.location.search);

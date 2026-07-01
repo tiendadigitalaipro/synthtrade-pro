@@ -135,7 +135,7 @@ class DerivAPI {
   private isConnecting = false;
   public onReconnectWarning: ((msg: string) => void) | null = null;
 
-  connect(appId: string = '16303', loginid?: string): Promise<void> {
+  connect(appId: string = '1089'): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.isConnecting) {
         reject(new Error('Connection already in progress'));
@@ -147,11 +147,10 @@ class DerivAPI {
       }
 
       this.isConnecting = true;
-      // green = cuentas reales, blue = demo/virtual (VRT/VRW prefix)
-      const isDemo = loginid ? /^(VRT|VRW)/i.test(loginid) : false;
-      const server = isDemo ? 'blue' : 'green';
-      const wsAppId = /[^0-9]/.test(appId) ? '16303' : appId;
-      const url = `wss://${server}.derivws.com/websockets/v3?app_id=${wsAppId}&l=EN&brand=deriv`;
+      // Endpoint oficial segun developers.deriv.com/docs/options/websocket/
+      // (ws.derivws.com, sin subdominios green/blue — eso no existe en la doc actual)
+      const wsAppId = /[^0-9]/.test(appId) ? '1089' : appId;
+      const url = `wss://ws.derivws.com/websockets/v3?app_id=${wsAppId}&l=EN&brand=deriv`;
 
       try {
         this.ws = new WebSocket(url);
