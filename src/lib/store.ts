@@ -248,9 +248,14 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
     // Validación de formato: los API tokens clásicos de Deriv tienen ~15
     // caracteres y los tokens de sesión OAuth empiezan con "a1-" (~32 chars).
-    // NOTA: Deriv NO usa prefijo "pat_" — eso era una suposición errónea.
+    // Los tokens del HUB NUEVO de Deriv (OAuth2 Bearer, ~68 chars) NO son
+    // compatibles con esta API WebSocket clásica — detectarlos y avisar.
+    if (stateToken.length > 40 && !stateToken.startsWith('a1-')) {
+      set({ connectionError: `⚠️ Este token (${stateToken.length} caracteres) es del HUB NUEVO de Deriv (home.deriv.com) y no funciona con esta API. Crea un token CLÁSICO (~15 caracteres) en legacy-api.deriv.com/dashboard → pestaña API tokens → permisos Read + Trade.` });
+      return;
+    }
     if (stateToken.length < 8 || stateToken.length > 128) {
-      set({ connectionError: `Token con longitud inválida (${stateToken.length} caracteres). Crea un token nuevo en app.deriv.com/account/api-token y pégalo completo, sin espacios.` });
+      set({ connectionError: `Token con longitud inválida (${stateToken.length} caracteres). Crea un token clásico en legacy-api.deriv.com/dashboard y pégalo completo, sin espacios.` });
       return;
     }
 
@@ -392,7 +397,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
         rawMsg.toLowerCase().includes('invalid token') ||
         rawMsg.toLowerCase().includes('token is invalid')
       ) {
-        errMsg = `❌ Deriv rechazó el token (${rawCode || 'sin código'}): "${rawMsg}". Ve a app.deriv.com/account/api-token → crea un token NUEVO con los 4 permisos (Read, Trade, Payments, Admin) → pégalo aquí sin espacios.`;
+        errMsg = `❌ Deriv rechazó el token (${rawCode || 'sin código'}): "${rawMsg}". Crea un token CLÁSICO (~15 caracteres) en legacy-api.deriv.com/dashboard → API tokens → permisos Read + Trade. Los tokens del hub nuevo (home.deriv.com, ~68 caracteres) NO funcionan aquí.`;
       } else if (rawCode === 'RateLimit' || errMsg.includes('RateLimit')) {
         errMsg = '⏳ Demasiados intentos. Espera 1 minuto e intenta de nuevo.';
       } else if (errMsg.includes('timeout') || errMsg.includes('Timeout')) {

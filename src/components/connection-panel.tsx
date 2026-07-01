@@ -97,12 +97,12 @@ export function ConnectionPanel() {
 
             {/* Instrucciones rápidas */}
             <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5 text-[10px] text-blue-300 space-y-1">
-              <p className="font-semibold text-blue-200">Cómo obtener tu token:</p>
+              <p className="font-semibold text-blue-200">Cómo obtener tu token (usa esta URL exacta):</p>
               <ol className="list-decimal pl-3 space-y-0.5">
-                <li>Ve a <span className="font-mono text-amber-300">home.deriv.com</span></li>
-                <li>Menú → Perfil → <strong>API Token</strong></li>
-                <li>Crea token con todos los permisos</li>
-                <li>Copia y pégalo abajo</li>
+                <li>Ve a <span className="font-mono text-amber-300">legacy-api.deriv.com/dashboard</span></li>
+                <li>Inicia sesión → pestaña <strong>API tokens</strong></li>
+                <li>Crea token con permisos <strong>Read + Trade</strong> (mide ~15 caracteres)</li>
+                <li>⚠️ NO uses home.deriv.com — sus tokens (~68 caracteres) son del hub nuevo y NO funcionan aquí</li>
               </ol>
             </div>
 
@@ -174,27 +174,24 @@ export function ConnectionPanel() {
             </DialogHeader>
             <div className="space-y-3 text-sm">
               <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-blue-300 text-xs space-y-1">
-                <p className="font-bold text-blue-200">PASO 1 — Registra tu App en Deriv (gratis)</p>
+                <p className="font-bold text-blue-200">PASO 1 — Crea tu token clásico (gratis)</p>
                 <ol className="list-decimal pl-4 space-y-1 mt-1">
-                  <li>Ve a <a href="https://app.deriv.com/apps/" target="_blank" rel="noreferrer" className="text-emerald-400 underline">app.deriv.com/apps</a></li>
-                  <li>Clic en <strong>Register app</strong></li>
-                  <li>Name: <strong>SynthTrade</strong></li>
-                  <li>Redirect URL: <span className="font-mono text-[10px] text-amber-300">https://synthtrade-pro.vercel.app</span></li>
-                  <li>Marca: Read, Trade, Payments, Admin</li>
-                  <li>Clic Register → copia el <strong>App ID</strong> (numero)</li>
+                  <li>Ve a <a href="https://legacy-api.deriv.com/dashboard/" target="_blank" rel="noreferrer" className="text-emerald-400 underline">legacy-api.deriv.com/dashboard</a></li>
+                  <li>Inicia sesión con tu cuenta de Deriv</li>
+                  <li>Pestaña <strong>API tokens</strong> → <strong>Create new token</strong></li>
+                  <li>Nombre: cualquiera. Permisos: <strong>Read + Trade</strong></li>
+                  <li>Clic Create → copia el token (mide ~15 caracteres)</li>
                 </ol>
               </div>
               <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-emerald-300 text-xs space-y-1">
                 <p className="font-bold text-emerald-200">PASO 2 — Conecta</p>
                 <ol className="list-decimal pl-4 space-y-1 mt-1">
-                  <li>Pega el App ID en el campo de arriba</li>
-                  <li>Clic en <strong>Login con Deriv</strong></li>
-                  <li>Inicia sesion en Deriv y autoriza</li>
-                  <li>Te redirige de vuelta — ya estas conectado</li>
+                  <li>Pega el token en el campo de arriba</li>
+                  <li>Clic en <strong>Conectar con Deriv</strong></li>
                 </ol>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                El login OAuth no requiere copiar tokens. Es el mismo metodo que usa Deriv Bot.
+                ⚠️ No uses home.deriv.com / hub.deriv.com para el token — esos son del hub nuevo (tokens ~68 caracteres) y no son compatibles con esta app.
               </p>
             </div>
           </DialogContent>
