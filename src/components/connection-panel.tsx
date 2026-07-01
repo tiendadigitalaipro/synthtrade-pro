@@ -37,7 +37,8 @@ export function ConnectionPanel() {
 
   const handleOAuthLogin = () => {
     localStorage.setItem('synthtrade_app_id', DERIV_APP_ID);
-    window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=EN&brand=deriv`;
+    const redirectUri = encodeURIComponent('https://synthtrade-pro.vercel.app');
+    window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&redirect_uri=${redirectUri}&l=EN&brand=deriv&response_type=token`;
   };
 
   const handleManualConnect = () => {
