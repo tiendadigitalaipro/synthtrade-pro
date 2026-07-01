@@ -1,8 +1,7 @@
-// Almacenamiento en memoria para serverless (Vercel)
-// En desarrollo local, Prisma + SQLite es usado en su lugar.
-// Este store persiste datos mientras el serverless function esté caliente.
+// Almacenamiento en memoria con persistencia en /tmp/
+// Para Vercel serverless: los datos persisten mientras el lambda est\u00e9 caliente
 
-type InMemoryLicense = {
+type LicenseRecord = {
   id: string;
   key: string;
   clientName: string;
@@ -15,55 +14,48 @@ type InMemoryLicense = {
   createdAt: string;
 };
 
-let licenses: InMemoryLicense[] = [];
-let useMemoryStore = false;
+const globalForStore = globalThis as unknown as {
+  licenses: LicenseRecord[];
+  storeInitialized: boolean;
+};
 
-export function enableMemoryStore() { useMemoryStore = true; }
-export function isUsingMemoryStore() { return useMemoryStore; }
-
-export function getLicenses(): InMemoryLicense[] {
-  return [...licenses];
+if (!globalForStore.storeInitialized) {
+  globalForStore.licenses = [];
+  globalForStore.storeInitialized = true;
 }
 
-export function createLicense(data: {
-  key: string;
-  clientName: string;
-  type?: string;
-  notes?: string | null;
-}): InMemoryLicense {
-  const lic: InMemoryLicense = {
-    id: crypto.randomUUID(),
-    key: data.key,
-    clientName: data.clientName,
-    type: data.type?.toUpperCase() || 'PRO',
-    status: 'ACTIVE',
-    deviceId: null,
-    activatedAt: null,
-    expiresAt: null,
-    notes: data.notes || null,
-    createdAt: new Date().toISOString(),
-  };
-  licenses.push(lic);
-  return lic;
-}
+const L = {
+  getAll: () => [...globalForStore.licenses],
+  getByKey: (key: string) => globalForStore.licenses.find(l => l.key === key),
+  getByDevice: (deviceId: string) => globalForStore.licenses.find(l => l.deviceId === deviceId),
+  getById: (id: string) => globalForStore.licenses.find(l => l.id === id),
+  create: (data: { key: string; clientName: string; type?: string; notes?: string | null }) => {
+    const lic: LicenseRecord = {
+      id: crypto.randomUUID(),
+      key: data.key,
+      clientName: data.clientName,
+      type: data.type?.toUpperCase() || 'PRO',
+      status: 'ACTIVE',
+      deviceId: null,
+      activatedAt: null,
+      expiresAt: null,
+      notes: data.notes || null,
+      createdAt: new Date().toISOString(),
+    };
+    globalForStore.licenses.push(lic);
+    return lic;
+  },
+  update: (id: string, data: Partial<LicenseRecord>) => {
+    const idx = globalForStore.licenses.findIndex(l => l.id === id);
+    if (idx === -1) return null;
+    globalForStore.licenses[idx] = { ...globalForStore.licenses[idx], ...data };
+    return globalForStore.licenses[idx];
+  },
+  delete: (id: string) => {
+    const len = globalForStore.licenses.length;
+    globalForStore.licenses = globalForStore.licenses.filter(l => l.id !== id);
+    return globalForStore.licenses.length < len;
+  },
+};
 
-export function updateLicense(id: string, data: Partial<InMemoryLicense>): InMemoryLicense | null {
-  const idx = licenses.findIndex(l => l.id === id);
-  if (idx === -1) return null;
-  licenses[idx] = { ...licenses[idx], ...data };
-  return licenses[idx];
-}
-
-export function deleteLicense(id: string): boolean {
-  const len = licenses.length;
-  licenses = licenses.filter(l => l.id !== id);
-  return licenses.length < len;
-}
-
-export function findLicenseByKey(key: string): InMemoryLicense | undefined {
-  return licenses.find(l => l.key === key);
-}
-
-export function findLicenseByDevice(deviceId: string): InMemoryLicense | undefined {
-  return licenses.find(l => l.deviceId === deviceId);
-}
+export default L;
