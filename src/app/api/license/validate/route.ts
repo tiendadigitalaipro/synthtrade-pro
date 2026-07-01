@@ -1,106 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import L from '@/lib/license-store';
 
 export async function POST(req: NextRequest) {
-  async function findDevice(deviceId: string) { try { return await db.license.findFirst({ where: { deviceId } }); } catch { const { findLicenseByDevice } = await import('@/lib/license-store'); const l = findLicenseByDevice(deviceId); return l ? { id: l.id, key: l.key, clientName: l.clientName, type: l.type, status: l.status, deviceId: l.deviceId || null, activatedAt: l.activatedAt ? new Date(l.activatedAt) : null, expiresAt: l.expiresAt ? new Date(l.expiresAt) : null, notes: l.notes || null, createdAt: new Date(l.createdAt), updatedAt: new Date() } : null; } }
-async function updateLic(id: string, data: any) { try { return await db.license.update({ where: { id }, data }); } catch { return null; } }
-
-try {
+  try {
     const body = await req.json();
     const { deviceId } = body;
-
     if (!deviceId || typeof deviceId !== 'string' || deviceId.length < 10) {
       return NextResponse.json({ valid: false, type: 'NONE', status: 'NOT_FOUND', message: 'Invalid device ID.' }, { status: 400 });
     }
 
-    // Find license registered to this device
-    const license = await findDevice(deviceId);
+    let license: any = null;
+    try {
+      const { db } = await import('@/lib/db');
+      license = await db.license.findFirst({ where: { deviceId } });
+    } catch {
+      license = L.getByDevice(deviceId);
+    }
 
     if (!license) {
-      return NextResponse.json({
-        valid: false,
-        type: 'NONE',
-        status: 'NOT_FOUND',
-        message: 'No license found for this device. Please enter your license key.',
-        deviceId,
-      });
+      return NextResponse.json({ valid: false, type: 'NONE', status: 'NOT_FOUND', message: 'No license found for this device.', deviceId });
     }
 
-    // Check status
     if (license.status === 'BLOCKED') {
-      return NextResponse.json({
-        valid: false,
-        type: license.type,
-        status: 'BLOCKED',
-        clientName: license.clientName,
-        message: 'Your license has been blocked. Contact A2K Digital Studio support.',
-        deviceId,
-      });
+      return NextResponse.json({ valid: false, type: license.type, status: 'BLOCKED', clientName: license.clientName, message: 'License blocked. Contact support.', deviceId });
     }
-
     if (license.status === 'PAUSED') {
-      return NextResponse.json({
-        valid: false,
-        type: license.type,
-        status: 'PAUSED',
-        clientName: license.clientName,
-        message: 'Your license is temporarily paused. Contact A2K Digital Studio support.',
-        deviceId,
-      });
+      return NextResponse.json({ valid: false, type: license.type, status: 'PAUSED', clientName: license.clientName, message: 'License paused. Contact support.', deviceId });
     }
 
-    // Check expiry (DEMO licenses expire)
     if (license.expiresAt) {
       const now = new Date();
       const expiresAt = new Date(license.expiresAt);
-
       if (now >= expiresAt) {
-        // Mark as expired if not already
-        if (license.status !== 'EXPIRED') {
-          await updateLic(license.id, { status: 'EXPIRED' });
+        try {
+          const { db } = await import('@/lib/db');
+          await db.license.update({ where: { id: license.id }, data: { status: 'EXPIRED' } });
+        } catch {
+          L.update(license.id, { status: 'EXPIRED' });
         }
-        return NextResponse.json({
-            valid: false,
-            type: license.type,
-            status: 'EXPIRED',
-          clientName: license.clientName,
-          expiresAt: license.expiresAt.toISOString(),
-          message: 'Your demo license has expired. Purchase a PRO license to continue.',
-          deviceId,
-        });
+        return NextResponse.json({ valid: false, type: license.type, status: 'EXPIRED', clientName: license.clientName, message: 'Your license has expired.', deviceId });
       }
-
-      // Calculate time left
-      const msLeft = expiresAt.getTime() - now.getTime();
-      const daysLeft = Math.floor(msLeft / (1000 * 60 * 60 * 24));
-      const hoursLeft = Math.floor((msLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-      return NextResponse.json({
-        valid: true,
-        type: license.type,
-        status: 'ACTIVE',
-        clientName: license.clientName,
-        expiresAt: license.expiresAt.toISOString(),
-        daysLeft,
-        hoursLeft,
-        message: `Demo license active. ${daysLeft}d ${hoursLeft}h remaining.`,
-        deviceId,
-      });
     }
 
-    // PRO license — no expiry
+    const expiresAtVal = license.expiresAt ? new Date(license.expiresAt) : null;
+    const msLeft = expiresAtVal ? expiresAtVal.getTime() - Date.now() : null;
     return NextResponse.json({
-      valid: true,
-      type: license.type,
-      status: 'ACTIVE',
-      clientName: license.clientName,
-      expiresAt: null,
-      message: 'PRO license active.',
+      valid: true, type: license.type, status: license.status || 'ACTIVE',
+      clientName: license.clientName, expiresAt: license.expiresAt?.toString?.() ?? null,
+      daysLeft: msLeft ? Math.floor(msLeft / 86400000) : undefined,
+      hoursLeft: msLeft ? Math.floor(msLeft / 3600000) : undefined,
+      message: `Welcome back, ${license.clientName}!`,
       deviceId,
     });
 
   } catch (err: any) {
-    console.error('[License Validate Error]', err);
-    return NextResponse.json({ valid: false, type: 'NONE', status: 'NOT_FOUND', message: 'Server error.' }, { status: 500 });
+    console.error('[Validate Error]', err);
+    return NextResponse.json({ valid: false, type: 'NONE', status: 'ERROR', message: 'Server error.' });
   }
 }
