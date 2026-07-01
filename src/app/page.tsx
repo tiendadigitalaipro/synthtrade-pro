@@ -44,7 +44,7 @@ export default function Home() {
     const token1 = params.get('token1');
     if (token1) {
       window.history.replaceState({}, '', window.location.pathname);
-      const savedAppId = localStorage.getItem('synthtrade_app_id') || '1089';
+      const savedAppId = localStorage.getItem('synthtrade_app_id') || '33I5gRnFDuizEhfuvaiKY';
       useTradingStore.getState().connect(token1, savedAppId);
     }
   }, []);

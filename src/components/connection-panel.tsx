@@ -30,7 +30,7 @@ export function ConnectionPanel() {
     disconnect,
   } = useTradingStore();
 
-  const DERIV_APP_ID = '41147430';
+  const DERIV_APP_ID = '33I5gRnFDuizEhfuvaiKY';
   const [showManual, setShowManual] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [showToken, setShowToken] = useState(false);
