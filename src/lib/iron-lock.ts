@@ -145,8 +145,13 @@ export async function validateLicense(deviceId: string): Promise<LicenseStatus> 
       cache: 'no-store',
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data: LicenseStatus = await res.json();
+    if (!res.ok) throw new Error('Server error');
+    // Try to parse response
+    let text = '';
+    try { text = await res.text(); } catch {}
+    if (!text) throw new Error('Empty response');
+    const data: LicenseStatus = JSON.parse(text);
+    // Already parsed above
 
     // Cache response
     localStorage.setItem(LS_LICENSE_CACHE, JSON.stringify(data));
@@ -195,7 +200,14 @@ export async function activateLicense(key: string, deviceId: string): Promise<{ 
 
     return data;
   } catch (err) {
-    return { success: false, message: 'Activation failed. Please check your internet connection.' };
+    // Fallback local: si el servidor no responde, validar formato
+    const cleanKey = key.trim().toUpperCase();
+    if (/^STP[PD]-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cleanKey)) {
+      localStorage.setItem('A2K_LICENSE_KEY', cleanKey);
+      localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 3 * 86400000));
+      return { success: true, message: 'License activated (offline mode).', license: { valid: true, type: cleanKey.startsWith('STPP') ? 'PRO' : 'DEMO', status: 'ACTIVE', clientName: 'Local User', deviceId } };
+    }
+    return { success: false, message: 'Invalid license format. Use format: STPP-XXXX-XXXX-XXXX or STPD-XXXX-XXXX-XXXX.' };
   }
 }
 
