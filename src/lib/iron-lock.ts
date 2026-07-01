@@ -108,7 +108,7 @@ async function sha256(message: string): Promise<string> {
 const LS_DEVICE_ID = 'stp_device_id';
 const LS_LICENSE_CACHE = 'stp_license_cache';
 const LS_CACHE_TS = 'stp_cache_ts';
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas — evita validaciones frecuentes al servidor
 
 // Get or generate device ID (cached in localStorage)
 export async function getDeviceId(): Promise<string> {
@@ -164,19 +164,23 @@ export async function validateLicense(deviceId: string): Promise<LicenseStatus> 
 
     return data;
   } catch (err) {
-    // Network error — check cache even if stale (offline tolerance 1 use)
+    // Servidor no disponible (cold start Vercel / sin internet)
+    // Usar cache aunque esté vencida — PRO y DEMO activas no expiran offline
     const cache = localStorage.getItem(LS_LICENSE_CACHE);
     if (cache) {
-      const parsed: LicenseStatus = JSON.parse(cache);
-      if (parsed.valid && parsed.status === 'ACTIVE') {
-        return { ...parsed, message: '(Offline mode — cached license)' };
-      }
+      try {
+        const parsed: LicenseStatus = JSON.parse(cache);
+        if (parsed.valid && (parsed.status === 'ACTIVE')) {
+          return { ...parsed, message: '✓ Licencia verificada (modo offline)' };
+        }
+      } catch (_) {}
     }
+    // Sin cache y sin servidor — pedir clave de nuevo
     return {
       valid: false,
       type: 'NONE',
       status: 'NOT_FOUND',
-      message: 'Could not connect to license server. Please check your internet connection.',
+      message: 'No se pudo conectar al servidor de licencias. Ingresa tu clave nuevamente.',
     };
   }
 }
