@@ -141,7 +141,7 @@ export function ConnectionPanel() {
                 </div>
                 <Button
                   onClick={handleManualConnect}
-                  disabled={isConnecting || !tokenInput.trim() || !appIdInput.trim()}
+                  disabled={isConnecting || !tokenInput.trim()}
                   size="sm"
                   className="w-full h-7 text-[10px] bg-emerald-700 hover:bg-emerald-600"
                 >
