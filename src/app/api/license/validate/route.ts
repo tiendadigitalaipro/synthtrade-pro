@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
-  try {
+  async function findDevice(deviceId: string) { try { return await db.license.findFirst({ where: { deviceId } }); } catch { const { findLicenseByDevice } = await import('@/lib/license-store'); const l = findLicenseByDevice(deviceId); return l ? { id: l.id, key: l.key, clientName: l.clientName, type: l.type, status: l.status, deviceId: l.deviceId || null, activatedAt: l.activatedAt ? new Date(l.activatedAt) : null, expiresAt: l.expiresAt ? new Date(l.expiresAt) : null, notes: l.notes || null, createdAt: new Date(l.createdAt), updatedAt: new Date() } : null; } }
+async function updateLic(id: string, data: any) { try { return await db.license.update({ where: { id }, data }); } catch { return null; } }
+
+try {
     const body = await req.json();
     const { deviceId } = body;
 
@@ -11,9 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find license registered to this device
-    const license = await db.license.findFirst({
-      where: { deviceId },
-    });
+    const license = await findDevice(deviceId);
 
     if (!license) {
       return NextResponse.json({
@@ -56,10 +57,7 @@ export async function POST(req: NextRequest) {
       if (now >= expiresAt) {
         // Mark as expired if not already
         if (license.status !== 'EXPIRED') {
-          await db.license.update({
-            where: { id: license.id },
-            data: { status: 'EXPIRED' },
-          });
+          await updateLic(license.id, { status: 'EXPIRED' });
         }
         return NextResponse.json({
             valid: false,

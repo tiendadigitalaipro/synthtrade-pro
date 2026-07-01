@@ -16,7 +16,10 @@ interface LicenseResponse {
 }
 
 export async function POST(req: NextRequest) {
-  try {
+  async function findLicense(key: string) { try { return await db.license.findUnique({ where: { key } }); } catch { const { findLicenseByKey } = await import('@/lib/license-store'); const l = findLicenseByKey(key); return l ? { id: l.id, key: l.key, clientName: l.clientName, type: l.type, status: l.status, deviceId: l.deviceId || null, activatedAt: l.activatedAt ? new Date(l.activatedAt) : null, expiresAt: l.expiresAt ? new Date(l.expiresAt) : null, notes: l.notes || null, createdAt: new Date(l.createdAt), updatedAt: new Date() } : null; } }
+async function updateLicense(id: string, data: any) { try { return await db.license.update({ where: { id }, data }); } catch { return null; } }
+
+try {
     const body = await req.json();
     const { key, deviceId } = body;
 
