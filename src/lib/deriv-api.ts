@@ -220,7 +220,9 @@ class DerivAPI {
       this.pendingRequests.delete(data.req_id);
 
       if (data.error) {
-        pending.reject(new Error(data.error.message || 'API Error'));
+        const err = new Error(data.error.message || 'API Error') as Error & { code?: string };
+        err.code = data.error.code;
+        pending.reject(err);
       } else {
         pending.resolve(data);
       }

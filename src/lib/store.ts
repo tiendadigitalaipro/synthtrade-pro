@@ -367,23 +367,19 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       // Subscribe to current market
       await get().subscribeToMarket(get().currentSymbol);
     } catch (error: any) {
-      // Translate Deriv error codes to friendly messages
-      let errMsg = error.message || 'Connection failed';
+      // Translate Deriv error codes to friendly messages — siempre mostrando el
+      // mensaje real que devuelve Deriv (error.code / error.message) en vez de
+      // adivinar la causa, para poder diagnosticar con datos reales.
+      const rawCode = error.code as string | undefined;
+      const rawMsg = error.message || 'Connection failed';
+      let errMsg = rawMsg;
       if (
-        errMsg.includes('Input validation failed') ||
-        errMsg.includes('authorize') ||
-        errMsg.includes('InvalidToken') ||
-        errMsg.toLowerCase().includes('invalid token') ||
-        errMsg.toLowerCase().includes('the token is invalid') ||
-        errMsg.toLowerCase().includes('token is invalid')
+        rawCode === 'InvalidToken' ||
+        rawMsg.toLowerCase().includes('invalid token') ||
+        rawMsg.toLowerCase().includes('token is invalid')
       ) {
-        const isPat = stateToken.startsWith('pat_');
-        if (isPat) {
-          errMsg = '❌ Token pat_ rechazado por Deriv. Solución: Ve a app.deriv.com/account/api-token → ELIMINA el token pat_ → Crea uno NUEVO → en "Nombre del token" pon cualquier nombre → activa los 4 permisos (Read, Trade, Payments, Admin) → el nuevo token empieza con letras/números sin "pat_" → pégalo aquí.';
-        } else {
-          errMsg = '❌ Token inválido. Pasos: 1) Ve a app.deriv.com/account/api-token  2) Crea un token NUEVO con los 4 permisos: Read + Trade + Payments + Admin  3) Copia el token completo  4) Pégalo aquí sin espacios';
-        }
-      } else if (errMsg.includes('RateLimit')) {
+        errMsg = `❌ Deriv rechazó el token (${rawCode || 'sin código'}): "${rawMsg}". Ve a app.deriv.com/account/api-token → crea un token NUEVO con los 4 permisos (Read, Trade, Payments, Admin) → pégalo aquí sin espacios.`;
+      } else if (rawCode === 'RateLimit' || errMsg.includes('RateLimit')) {
         errMsg = '⏳ Demasiados intentos. Espera 1 minuto e intenta de nuevo.';
       } else if (errMsg.includes('timeout') || errMsg.includes('Timeout')) {
         errMsg = '⏱️ Tiempo agotado. Verifica tu conexión a internet e intenta de nuevo.';
