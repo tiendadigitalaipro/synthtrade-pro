@@ -9,8 +9,6 @@ function checkAdmin(req: NextRequest): boolean {
 }
 
 export async function GET(request: NextRequest) {
-  // Proteger endpoint con autenticación
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const { searchParams } = new URL(request.url);
@@ -39,8 +37,6 @@ const VALID_CONTRACT_TYPES = ['CALL', 'PUT', 'RISE', 'FALL'];
 const VALID_STATUSES = ['OPEN', 'WON', 'LOST', 'SOLD'];
 
 export async function POST(request: NextRequest) {
-  // Proteger endpoint con autenticación
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const body = await request.json();
@@ -84,8 +80,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  // Proteger endpoint con autenticación
-  if (!checkAdmin(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const body = await request.json();

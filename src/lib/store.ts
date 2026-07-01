@@ -369,10 +369,15 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     } catch (error: any) {
       // Translate Deriv error codes to friendly messages
       let errMsg = error.message || 'Connection failed';
-      if (errMsg.includes('Input validation failed') || errMsg.includes('authorize')) {
-        errMsg = '❌ Token inválido. Asegúrate de: 1) Crear el token en app.deriv.com/account/api-token  2) Activar permisos: Read + Trade + Payments + Admin  3) Copiar el token completo sin espacios';
-      } else if (errMsg.includes('InvalidToken') || errMsg.includes('invalid token')) {
-        errMsg = '❌ Token expirado o inválido. Crea un nuevo token en Deriv.';
+      if (
+        errMsg.includes('Input validation failed') ||
+        errMsg.includes('authorize') ||
+        errMsg.includes('InvalidToken') ||
+        errMsg.toLowerCase().includes('invalid token') ||
+        errMsg.toLowerCase().includes('the token is invalid') ||
+        errMsg.toLowerCase().includes('token is invalid')
+      ) {
+        errMsg = '❌ Token inválido. Pasos: 1) Ve a app.deriv.com → Gestión de API → Ficha API  2) Crea un token NUEVO con permisos: Read + Trade + Payments + Admin  3) Copia el token completo (empieza con pat_)  4) Pégalo aquí sin espacios';
       } else if (errMsg.includes('RateLimit')) {
         errMsg = '⏳ Demasiados intentos. Espera 1 minuto e intenta de nuevo.';
       } else if (errMsg.includes('timeout') || errMsg.includes('Timeout')) {
