@@ -1,5 +1,5 @@
 // Cliente directo Turso para licencias, trades y settings en produccion
-import type { Client } from '@libsql/client';
+import type { Client, InValue } from '@libsql/client';
 
 let _client: Client | null = null;
 
@@ -51,9 +51,9 @@ export const turso = {
     const fields = Object.keys(data).filter(k => k !== 'id');
     if (!fields.length) return null;
     const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const values = fields.map(f => (data as Record<string,unknown>)[f]);
+    const values = fields.map(f => (data as Record<string, InValue>)[f]);
     await db.execute({ sql: `UPDATE License SET ${setClause}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`, args: [...values, id] });
-    return this.findLicenseByKey((data as Record<string,unknown>).key as string || id);
+    return this.findLicenseByKey((data as Record<string, InValue>).key as string || id);
   },
   async getAllLicenses(): Promise<LicenseRow[]> {
     const db = getClient(); if (!db) return [];
@@ -79,7 +79,7 @@ export const turso = {
   async getTrades(filters?: { symbol?: string; status?: string; limit?: number }): Promise<TradeRow[]> {
     const db = getClient(); if (!db) return [];
     let sql = 'SELECT * FROM TradeRecord';
-    const args: unknown[] = [];
+    const args: InValue[] = [];
     const where: string[] = [];
     if (filters?.symbol) { where.push('symbol = ?'); args.push(filters.symbol); }
     if (filters?.status) { where.push('status = ?'); args.push(filters.status); }
@@ -102,10 +102,10 @@ export const turso = {
   },
   async updateTrade(id: string, data: Partial<Pick<TradeRow,'exitPrice'|'exitTime'|'profit'|'payout'|'status'>>): Promise<TradeRow | null> {
     const db = getClient(); if (!db) return null;
-    const fields = Object.keys(data).filter(k => (data as Record<string,unknown>)[k] !== undefined);
+    const fields = Object.keys(data).filter(k => (data as Record<string, InValue>)[k] !== undefined);
     if (!fields.length) return null;
     const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const values = fields.map(f => (data as Record<string,unknown>)[f]);
+    const values = fields.map(f => (data as Record<string, InValue>)[f]);
     await db.execute({ sql: `UPDATE TradeRecord SET ${setClause}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`, args: [...values, id] });
     const res = await db.execute({ sql: 'SELECT * FROM TradeRecord WHERE id = ? LIMIT 1', args: [id] });
     return (res.rows[0] as unknown as TradeRow) ?? null;
