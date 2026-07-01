@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 
-// Fix #9: Reemplazar 'as any' con tipos explícitos usando el schema de Prisma
-import type { License } from '@prisma/client';
-
-// Tipo para evitar 'as any' — campos que retornamos al cliente
+// Interfaz para respuesta de licencia
 interface LicenseResponse {
   valid: boolean;
   type: string;
@@ -15,11 +11,59 @@ interface LicenseResponse {
   deviceId: string;
 }
 
-export async function POST(req: NextRequest) {
-  async function findLicense(key: string) { try { return await db.license.findUnique({ where: { key } }); } catch { const { findLicenseByKey } = await import('@/lib/license-store'); const l = findLicenseByKey(key); return l ? { id: l.id, key: l.key, clientName: l.clientName, type: l.type, status: l.status, deviceId: l.deviceId || null, activatedAt: l.activatedAt ? new Date(l.activatedAt) : null, expiresAt: l.expiresAt ? new Date(l.expiresAt) : null, notes: l.notes || null, createdAt: new Date(l.createdAt), updatedAt: new Date() } : null; } }
-async function updateLicense(id: string, data: any) { try { return await db.license.update({ where: { id }, data }); } catch { return null; } }
+// Adaptador de BD: intenta Prisma, fallback a in-memory store
+async function db() {
+  try {
+    const { db: prismaDb } = await import('@/lib/db');
+    // Solo para probar si Prisma funciona
+    await prismaDb.license.count();
+    return prismaDb;
+  } catch {
+    return null; // fallback a in-memory
+  }
+}
 
-try {
+async function findLicense(key: string) {
+  const client = await db();
+  if (client) {
+    return await client.license.findUnique({ where: { key } });
+  }
+  const { findLicenseByKey } = await import('@/lib/license-store');
+  const l = findLicenseByKey(key);
+  if (!l) return null;
+  return {
+    id: l.id, key: l.key, clientName: l.clientName,
+    type: l.type, status: l.status,
+    deviceId: l.deviceId || null,
+    activatedAt: l.activatedAt ? new Date(l.activatedAt) : null,
+    expiresAt: l.expiresAt ? new Date(l.expiresAt) : null,
+    notes: l.notes || null,
+    createdAt: new Date(l.createdAt),
+    updatedAt: new Date(),
+  };
+}
+
+async function updateLic(id: string, data: any) {
+  const client = await db();
+  if (client) {
+    return await client.license.update({ where: { id }, data });
+  }
+  const { updateLicense } = await import('@/lib/license-store');
+  const l = updateLicense(id, data);
+  return l ? {
+    id: l.id, key: l.key, clientName: l.clientName,
+    type: l.type, status: l.status,
+    deviceId: l.deviceId || null,
+    activatedAt: l.activatedAt ? new Date(l.activatedAt) : null,
+    expiresAt: l.expiresAt ? new Date(l.expiresAt) : null,
+    notes: l.notes || null,
+    createdAt: new Date(l.createdAt),
+    updatedAt: new Date(),
+  } : null;
+}
+
+export async function POST(req: NextRequest) {
+  try {
     const body = await req.json();
     const { key, deviceId } = body;
 
@@ -30,19 +74,13 @@ try {
       return NextResponse.json({ success: false, message: 'Invalid device ID.' }, { status: 400 });
     }
 
-    // Sanitize key
     const cleanKey = key.trim().toUpperCase();
-
-    // Find license by key
-    const license = await db.license.findUnique({
-      where: { key: cleanKey },
-    });
+    const license = await findLicense(cleanKey);
 
     if (!license) {
       return NextResponse.json({ success: false, message: 'Invalid license key. Please verify and try again.' });
     }
 
-    // Check if blocked or expired
     if (license.status === 'BLOCKED') {
       return NextResponse.json({ success: false, message: 'This license key has been blocked.' });
     }
@@ -50,18 +88,16 @@ try {
       return NextResponse.json({ success: false, message: 'This license key has already expired.' });
     }
 
-    // Check if already activated on a DIFFERENT device
     if (license.deviceId && license.deviceId !== deviceId) {
       return NextResponse.json({
         success: false,
-        message: 'This license key is already activated on another device. Each license is tied to one device only.',
+        message: 'This license key is already activated on another device.',
       });
     }
 
-    // Already activated on THIS device — just refresh
     if (license.deviceId === deviceId) {
       const now = new Date();
-      let status: LicenseResponse = {
+      const status: LicenseResponse = {
         valid: true,
         type: license.type,
         status: 'ACTIVE',
@@ -69,53 +105,43 @@ try {
         expiresAt: license.expiresAt?.toISOString() ?? null,
         deviceId,
       };
-
       if (license.expiresAt && now >= license.expiresAt) {
         return NextResponse.json({ success: false, message: 'Your license has expired. Purchase a new PRO license.' });
       }
-
       return NextResponse.json({ success: true, message: 'License already active on this device.', license: status });
     }
 
-    // First activation on this device
     const now = new Date();
     let expiresAt: Date | null = null;
-
     if (license.type === 'DEMO') {
-      // Demo starts from ACTIVATION DATE — exactly 3 days, server-side
-      if (license.activatedAt) {
-        // Already had an activation date (admin pre-set)
-        expiresAt = license.expiresAt || new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-      } else {
-        expiresAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-      }
+      expiresAt = license.expiresAt || new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     }
 
-    // Activate: bind to device
-    const updated = await db.license.update({
-      where: { id: license.id },
-      data: {
-        deviceId,
-        activatedAt: license.activatedAt || now,
-        expiresAt: license.type === 'DEMO' ? expiresAt : license.expiresAt,
-        status: 'ACTIVE',
-      },
+    const updated = await updateLic(license.id, {
+      deviceId,
+      activatedAt: license.activatedAt || now,
+      expiresAt: license.type === 'DEMO' ? expiresAt : license.expiresAt,
+      status: 'ACTIVE',
     });
 
-    const msLeft = updated.expiresAt ? updated.expiresAt.getTime() - now.getTime() : null;
+    if (!updated) {
+      return NextResponse.json({ success: false, message: 'Error activating license.' }, { status: 500 });
+    }
+
+    const msLeft = updated.expiresAt ? new Date(updated.expiresAt).getTime() - now.getTime() : null;
     const daysLeft = msLeft ? Math.floor(msLeft / (1000 * 60 * 60 * 24)) : undefined;
 
     return NextResponse.json({
       success: true,
       message: license.type === 'DEMO'
-        ? `Demo activated! You have 3 days of access. Expires ${updated.expiresAt?.toLocaleDateString()}.`
+        ? `Demo activated! You have 3 days of access.`
         : `PRO license activated! Welcome, ${license.clientName}!`,
       license: {
         valid: true,
         type: updated.type,
         status: 'ACTIVE',
         clientName: updated.clientName,
-        expiresAt: updated.expiresAt?.toISOString() ?? null,
+        expiresAt: updated.expiresAt?.toString?.() ?? null,
         daysLeft,
         deviceId,
       },
