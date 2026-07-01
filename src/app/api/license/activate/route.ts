@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       updated = L.update(license.id, {
         deviceId: updateData.deviceId?.toISOString?.() || String(updateData.deviceId),
         activatedAt: updateData.activatedAt?.toISOString?.() || String(updateData.activatedAt),
-        expiresAt: updateData.expiresAt?.toISOString?.() || null,
+        expiresAt: typeof updateData.expiresAt === 'string' ? updateData.expiresAt : updateData.expiresAt?.toISOString?.() || null,
         status: 'ACTIVE',
       });
     }
