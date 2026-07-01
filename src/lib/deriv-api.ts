@@ -147,7 +147,7 @@ class DerivAPI {
       }
 
       this.isConnecting = true;
-      const url = `wss://ws.derivws.com/websockets/v3?app_id=${appId}`;
+      const url = `wss://ws.binaryws.com/websockets/v3?app_id=${appId}`;
 
       try {
         this.ws = new WebSocket(url);

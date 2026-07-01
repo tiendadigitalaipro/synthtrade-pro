@@ -38,6 +38,17 @@ export default function Home() {
     loadTradeHistory().catch(console.error);
   }, []);
 
+  // OAuth callback: Deriv redirige aqui con ?token1=xxx&loginid1=xxx
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token1 = params.get('token1');
+    if (token1) {
+      window.history.replaceState({}, '', window.location.pathname);
+      const savedAppId = localStorage.getItem('synthtrade_app_id') || '1089';
+      useTradingStore.getState().connect(token1, savedAppId);
+    }
+  }, []);
+
   // ─── Keyboard Shortcuts ──────────────────────────────────────
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Ignore if user is typing in an input
