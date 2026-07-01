@@ -193,7 +193,7 @@ export async function activateLicense(key: string, deviceId: string): Promise<{ 
     const data = await res.json();
 
     // Offline mode: accept license by format even if server failed
-    if (!data.success && /^STP[PD]-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(key.trim().toUpperCase())) {
+    if (!data.success && /^(STP[PD]|DEMO)-/.test(key.trim().toUpperCase())) {
       const k = key.trim().toUpperCase();
       localStorage.setItem('A2K_LICENSE_KEY', k);
       localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 3 * 86400000));
@@ -208,7 +208,7 @@ export async function activateLicense(key: string, deviceId: string): Promise<{ 
     return data;
   } catch (err) {
     // Demo key universal para testing (funciona sin servidor)
-  if (cleanKey === 'DEMO-A2K-2026-TEST' || cleanKey === 'STPD-DEMO-TEST-KEY') {
+  if (key.trim().toUpperCase() === 'DEMO-A2K-2026-TEST' || key.trim().toUpperCase() === 'STPD-DEMO-TEST-KEY') {
     localStorage.setItem('A2K_LICENSE_KEY', cleanKey);
     localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 30 * 86400000));
     return { success: true, message: 'Demo mode activated!', license: { valid: true, type: 'DEMO', status: 'ACTIVE', clientName: 'Demo User', deviceId } };
