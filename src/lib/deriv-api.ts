@@ -147,7 +147,9 @@ class DerivAPI {
       }
 
       this.isConnecting = true;
-      const url = `wss://ws.binaryws.com/websockets/v3?app_id=${appId}`;
+      // binaryws.com requiere app_id numerico — si es alfanumerico (nuevo portal Deriv), usar 1089
+      const wsAppId = /[^0-9]/.test(appId) ? '1089' : appId;
+      const url = `wss://ws.binaryws.com/websockets/v3?app_id=${wsAppId}`;
 
       try {
         this.ws = new WebSocket(url);

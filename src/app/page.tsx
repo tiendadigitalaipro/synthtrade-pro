@@ -38,14 +38,28 @@ export default function Home() {
     loadTradeHistory().catch(console.error);
   }, []);
 
-  // OAuth callback: Deriv redirige aqui con ?token1=xxx&loginid1=xxx
+  // OAuth callback: Deriv puede devolver token en query params (?token1=xxx) O hash (#token1=xxx)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token1 = params.get('token1');
-    if (token1) {
+    const savedAppId = localStorage.getItem('synthtrade_app_id') || '33I5gRnFDuizEhfuvaiKY';
+
+    // Verificar query params primero
+    const queryParams = new URLSearchParams(window.location.search);
+    const tokenFromQuery = queryParams.get('token1') || queryParams.get('access_token') || queryParams.get('token');
+    if (tokenFromQuery) {
       window.history.replaceState({}, '', window.location.pathname);
-      const savedAppId = localStorage.getItem('synthtrade_app_id') || '33I5gRnFDuizEhfuvaiKY';
-      useTradingStore.getState().connect(token1, savedAppId);
+      useTradingStore.getState().connect(tokenFromQuery, savedAppId);
+      return;
+    }
+
+    // Verificar hash fragment (#token1=xxx o #access_token=xxx)
+    const hashStr = window.location.hash.replace('#', '');
+    if (hashStr) {
+      const hashParams = new URLSearchParams(hashStr);
+      const tokenFromHash = hashParams.get('token1') || hashParams.get('access_token') || hashParams.get('token');
+      if (tokenFromHash) {
+        window.history.replaceState({}, '', window.location.pathname);
+        useTradingStore.getState().connect(tokenFromHash, savedAppId);
+      }
     }
   }, []);
 
