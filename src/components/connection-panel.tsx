@@ -185,7 +185,7 @@ export function ConnectionPanel() {
                   <a href="https://app.deriv.com" target="_blank" rel="noreferrer" className="text-emerald-400 underline">
                     app.deriv.com
                   </a>
-                  {' '}con tu cuenta <strong className="text-blue-400">Demo</strong> o <strong className="text-emerald-400">Real</strong>.
+                  {' '}con tu cuenta Demo o Real.
                 </li>
                 <li>
                   Ve a:{' '}
@@ -194,7 +194,7 @@ export function ConnectionPanel() {
                   </a>
                 </li>
                 <li>
-                  <strong className="text-foreground">Crea un nuevo token</strong> con estos 4 permisos activados:
+                  <strong className="text-foreground">Crea un nuevo token</strong> — nombre: "SynthTrade" — activa los 4 permisos:
                   <ul className="list-none pl-2 mt-2 space-y-1">
                     <li className="text-emerald-400">✅ Read</li>
                     <li className="text-emerald-400">✅ Trade</li>
@@ -203,15 +203,16 @@ export function ConnectionPanel() {
                   </ul>
                 </li>
                 <li>
-                  <strong className="text-foreground">Copia el token</strong> generado (son ~15 caracteres) y pégalo en el campo de arriba.
+                  <strong className="text-foreground">Copia el token completo</strong> que aparece. Puede ser corto (~15 chars) o largo (empieza con <span className="font-mono text-amber-400">pat_</span>). Pégalo arriba sin espacios.
                 </li>
-                <li>
-                  Presiona <strong className="text-foreground">Connect</strong>.
-                </li>
+                <li>Presiona <strong className="text-foreground">Connect</strong>.</li>
               </ol>
-              <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-blue-300 text-xs space-y-1">
-                <p>💡 <strong>Demo vs Real:</strong> El mismo proceso aplica para ambas cuentas. El bot detecta automáticamente el tipo.</p>
-                <p>💡 <strong>Tip:</strong> Empieza siempre con la cuenta Demo para probar las estrategias sin riesgo.</p>
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-amber-300 text-xs space-y-1">
+                <p>⚠️ <strong>Si ves "token inválido":</strong> Asegúrate de tener los 4 permisos activos. Si el token empieza con <span className="font-mono">pat_</span>, también ingresa tu App ID personal en el campo avanzado de abajo.</p>
+                <p>🆔 <strong>Registrar App ID propio:</strong>{' '}
+                  <a href="https://app.deriv.com/apps/" target="_blank" rel="noreferrer" className="text-emerald-400 underline">app.deriv.com/apps</a>
+                  {' '}→ Register app → copia el ID → pégalo en el campo App ID.
+                </p>
               </div>
               <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 text-yellow-400 text-xs">
                 ⚠️ Nunca compartas tu token API. El bot se conecta directamente a los servidores de Deriv mediante WebSocket encriptado.

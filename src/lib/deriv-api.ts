@@ -147,8 +147,7 @@ class DerivAPI {
       }
 
       this.isConnecting = true;
-      // ws.deriv.com es el endpoint actual — binaryws.com está deprecado para tokens pat_
-      const url = `wss://ws.deriv.com/websockets/v3?app_id=${appId}`;
+      const url = `wss://ws.binaryws.com/websockets/v3?app_id=${appId}`;
 
       try {
         this.ws = new WebSocket(url);

@@ -10,7 +10,8 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -72,6 +73,9 @@
     "vaul": "^1.1.2",
     "zod": "^4.0.2",
     "zustand": "^5.0.6"
+  },
+  "prisma": {
+    "seed": "node -e \"const {PrismaClient}=require('@prisma/client');const db=new PrismaClient();const keys=[{key:'STPP-A2K1-PROX-2026',clientName:'Abigail - A2K Studio',type:'PRO',status:'ACTIVE'},{key:'STPD-DEMO-TEST-2026',clientName:'Demo User',type:'DEMO',status:'ACTIVE'},{key:'STPP-SINT-RADE-PRO1',clientName:'SynthTrade PRO',type:'PRO',status:'ACTIVE'}];Promise.all(keys.map(k=>db.license.upsert({where:{key:k.key},update:{},create:k}).then(()=>console.log('OK:',k.key)))).then(()=>db.$disconnect())\""
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
