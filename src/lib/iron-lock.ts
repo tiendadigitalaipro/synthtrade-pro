@@ -199,9 +199,12 @@ export async function activateLicense(key: string, deviceId: string): Promise<{ 
     // Offline mode: accept license by format even if server failed
     if (!data.success && /^(STP[PD]|DEMO)-/.test(key.trim().toUpperCase())) {
       const k = key.trim().toUpperCase();
+      const offlineLicense: LicenseStatus = { valid: true, type: k.startsWith('STPP') ? 'PRO' : 'DEMO', status: 'ACTIVE', clientName: 'Local', deviceId };
       localStorage.setItem('A2K_LICENSE_KEY', k);
       localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 3 * 86400000));
-      return { success: true, message: 'License accepted (offline).', license: { valid: true, type: k.startsWith('STPP') ? 'PRO' : 'DEMO', status: 'ACTIVE', clientName: 'Local', deviceId } };
+      localStorage.setItem(LS_LICENSE_CACHE, JSON.stringify(offlineLicense));
+      localStorage.setItem(LS_CACHE_TS, String(Date.now()));
+      return { success: true, message: 'License accepted (offline).', license: offlineLicense };
     }
     if (data.success) {
       // Clear cache so next validate fetches fresh
@@ -212,19 +215,25 @@ export async function activateLicense(key: string, deviceId: string): Promise<{ 
     return data;
   } catch (err) {
     // Demo key universal para testing (funciona sin servidor)
-  if (key.trim().toUpperCase() === 'DEMO-A2K-2026-TEST' || key.trim().toUpperCase() === 'STPD-DEMO-TEST-KEY') {
-    localStorage.setItem('A2K_LICENSE_KEY', key.trim().toUpperCase());
-    localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 30 * 86400000));
-    return { success: true, message: 'Demo mode activated!', license: { valid: true, type: 'DEMO', status: 'ACTIVE', clientName: 'Demo User', deviceId } };
-  }
-  // Fallback local: si el servidor no responde, validar formato
+    if (key.trim().toUpperCase() === 'DEMO-A2K-2026-TEST' || key.trim().toUpperCase() === 'STPD-DEMO-TEST-KEY') {
+      const demoLicense: LicenseStatus = { valid: true, type: 'DEMO', status: 'ACTIVE', clientName: 'Demo User', deviceId };
+      localStorage.setItem('A2K_LICENSE_KEY', key.trim().toUpperCase());
+      localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 30 * 86400000));
+      localStorage.setItem(LS_LICENSE_CACHE, JSON.stringify(demoLicense));
+      localStorage.setItem(LS_CACHE_TS, String(Date.now()));
+      return { success: true, message: 'Demo mode activated!', license: demoLicense };
+    }
+    // Fallback local: si el servidor no responde, validar formato
     const cleanKey = key.trim().toUpperCase();
     if (/^STP[PD]-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cleanKey)) {
+      const localLicense: LicenseStatus = { valid: true, type: cleanKey.startsWith('STPP') ? 'PRO' : 'DEMO', status: 'ACTIVE', clientName: 'Local User', deviceId };
       localStorage.setItem('A2K_LICENSE_KEY', cleanKey);
       localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 3 * 86400000));
-      return { success: true, message: 'License activated (offline mode).', license: { valid: true, type: cleanKey.startsWith('STPP') ? 'PRO' : 'DEMO', status: 'ACTIVE', clientName: 'Local User', deviceId } };
+      localStorage.setItem(LS_LICENSE_CACHE, JSON.stringify(localLicense));
+      localStorage.setItem(LS_CACHE_TS, String(Date.now()));
+      return { success: true, message: 'License activated (offline mode).', license: localLicense };
     }
-    return { success: false, message: 'Invalid license format. Use format: STPP-XXXX-XXXX-XXXX or STPD-XXXX-XXXX-XXXX.' };
+    return { success: false, message: 'Formato inválido. Usa: STPP-XXXX-XXXX-XXXX o STPD-XXXX-XXXX-XXXX' };
   }
 }
 
