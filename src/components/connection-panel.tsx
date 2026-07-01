@@ -30,32 +30,21 @@ export function ConnectionPanel() {
     disconnect,
   } = useTradingStore();
 
-  const [appIdInput, setAppIdInput] = useState('');
+  const DERIV_APP_ID = '41147430';
   const [showManual, setShowManual] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [showToken, setShowToken] = useState(false);
-  const [appIdError, setAppIdError] = useState('');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('synthtrade_app_id');
-    if (saved) setAppIdInput(saved);
-  }, []);
 
   const handleOAuthLogin = () => {
-    const val = appIdInput.trim();
-    if (!val) { setAppIdError('Ingresa tu App ID'); return; }
-    if (!/^\d+$/.test(val)) { setAppIdError('Solo numeros (ej: 67891)'); return; }
-    setAppIdError('');
-    localStorage.setItem('synthtrade_app_id', val);
-    window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${val}&l=EN&brand=deriv`;
+    localStorage.setItem('synthtrade_app_id', DERIV_APP_ID);
+    window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${DERIV_APP_ID}&l=EN&brand=deriv`;
   };
 
   const handleManualConnect = () => {
     const cleanToken = tokenInput.replace(/[\s​‌‍﻿'"]/g, '');
-    const cleanAppId = appIdInput.trim();
-    if (cleanToken && cleanAppId) {
-      localStorage.setItem('synthtrade_app_id', cleanAppId);
-      connect(cleanToken, cleanAppId);
+    if (cleanToken) {
+      localStorage.setItem('synthtrade_app_id', DERIV_APP_ID);
+      connect(cleanToken, DERIV_APP_ID);
     }
   };
 
@@ -106,40 +95,21 @@ export function ConnectionPanel() {
         {!isConnected && (
           <div className="space-y-2.5">
 
-            {/* App ID field */}
-            <div className="space-y-1">
-              <p className="text-[10px] text-muted-foreground font-semibold">Tu App ID de Deriv</p>
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="Numero App ID (ej: 67891)"
-                value={appIdInput}
-                onChange={(e) => { setAppIdInput(e.target.value); setAppIdError(''); }}
-                className="h-8 text-xs bg-background/50 font-mono"
-              />
-              {appIdError && <p className="text-[10px] text-red-400">{appIdError}</p>}
-              <p className="text-[10px] text-muted-foreground/60">
-                Registralo en{' '}
-                <a href="https://app.deriv.com/apps/" target="_blank" rel="noreferrer" className="text-blue-400 underline">
-                  app.deriv.com/apps
-                </a>
-                {' '}con Redirect URL:{' '}
-                <span className="font-mono text-[9px] text-amber-400/80">https://synthtrade-pro.vercel.app</span>
-              </p>
-            </div>
-
-            {/* OAuth Login button */}
+            {/* OAuth Login button — un solo clic */}
             <Button
               onClick={handleOAuthLogin}
               disabled={isConnecting}
-              className="w-full h-9 text-xs bg-[#FF444F] hover:bg-[#e03d47] text-white font-semibold"
+              className="w-full h-10 text-sm bg-[#FF444F] hover:bg-[#e03d47] text-white font-semibold"
             >
               {isConnecting ? (
-                <><Loader2 className="h-3 w-3 mr-2 animate-spin" /> Conectando...</>
+                <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> Conectando...</>
               ) : (
-                <><ExternalLink className="h-3.5 w-3.5 mr-2" /> Login con Deriv</>
+                <><ExternalLink className="h-4 w-4 mr-2" /> Conectar con Deriv</>
               )}
             </Button>
+            <p className="text-[10px] text-center text-muted-foreground/50">
+              Inicia sesión en Deriv → autoriza → listo
+            </p>
 
             {/* Manual token (collapsed) */}
             <button
