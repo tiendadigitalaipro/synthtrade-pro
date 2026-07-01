@@ -1,0 +1,4 @@
+.env
+.env.local
+synthtrade.db
+prisma/dev.db

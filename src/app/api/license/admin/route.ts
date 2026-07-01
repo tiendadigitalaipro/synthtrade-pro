@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { turso } from '@/lib/turso-db';
 import L from '@/lib/license-store';
 
 const ADMIN_KEY = process.env.IRON_LOCK_ADMIN_KEY || '';
@@ -17,9 +18,11 @@ function generateLicenseKey(type: 'PRO' | 'DEMO'): string {
 export async function GET(req: NextRequest) {
   if (!checkAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
+    if (turso.isAvailable()) {
+      return NextResponse.json(await turso.getAllLicenses());
+    }
     const { db } = await import('@/lib/db');
-    const licenses = await db.license.findMany({ orderBy: { createdAt: 'desc' } });
-    return NextResponse.json(licenses);
+    return NextResponse.json(await db.license.findMany({ orderBy: { createdAt: 'desc' } }));
   } catch {
     return NextResponse.json(L.getAll());
   }
@@ -30,14 +33,19 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { clientName, type = 'PRO', notes, customKey } = body;
   if (!clientName) return NextResponse.json({ error: 'clientName is required' }, { status: 400 });
-  const key = customKey?.trim()?.toUpperCase() || generateLicenseKey(type);
+  const key = customKey?.trim()?.toUpperCase() || generateLicenseKey(type as 'PRO' | 'DEMO');
+
   try {
+    if (turso.isAvailable()) {
+      const existing = await turso.findLicenseByKey(key);
+      if (existing) return NextResponse.json({ error: 'Key already exists' }, { status: 409 });
+      const license = await turso.createLicense({ key, clientName, type: type.toUpperCase(), status: 'ACTIVE', notes: notes || null });
+      return NextResponse.json(license, { status: 201 });
+    }
     const { db } = await import('@/lib/db');
     const existing = await db.license.findUnique({ where: { key } });
     if (existing) return NextResponse.json({ error: 'Key already exists' }, { status: 409 });
-    const license = await db.license.create({
-      data: { key, clientName, type: type.toUpperCase(), status: 'ACTIVE', notes: notes || null },
-    });
+    const license = await db.license.create({ data: { key, clientName, type: type.toUpperCase(), status: 'ACTIVE', notes: notes || null } });
     return NextResponse.json(license, { status: 201 });
   } catch {
     const existing = L.getByKey(key);
@@ -57,7 +65,12 @@ export async function PATCH(req: NextRequest) {
   if (notes !== undefined) data.notes = notes;
   if (deviceId !== undefined) data.deviceId = deviceId;
   if (clearDevice) Object.assign(data, { deviceId: null, activatedAt: null, expiresAt: null, status: 'ACTIVE' });
+
   try {
+    if (turso.isAvailable()) {
+      const updated = await turso.updateLicense(id, data);
+      return updated ? NextResponse.json(updated) : NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     const { db } = await import('@/lib/db');
     return NextResponse.json(await db.license.update({ where: { id }, data }));
   } catch {
@@ -71,6 +84,9 @@ export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
   try {
+    if (turso.isAvailable()) {
+      return NextResponse.json({ success: await turso.deleteLicense(id) });
+    }
     const { db } = await import('@/lib/db');
     await db.license.delete({ where: { id } });
     return NextResponse.json({ success: true });

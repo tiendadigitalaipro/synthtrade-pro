@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { turso } from '@/lib/turso-db';
 import L from '@/lib/license-store';
 
 export async function POST(req: NextRequest) {
@@ -10,11 +11,18 @@ export async function POST(req: NextRequest) {
     }
 
     let license: any = null;
-    try {
-      const { db } = await import('@/lib/db');
-      license = await db.license.findFirst({ where: { deviceId } });
-    } catch {
-      license = L.getByDevice(deviceId);
+
+    // 1. Turso (produccion)
+    if (turso.isAvailable()) {
+      license = await turso.findLicenseByDevice(deviceId);
+    } else {
+      // 2. Prisma SQLite (desarrollo local)
+      try {
+        const { db } = await import('@/lib/db');
+        license = await db.license.findFirst({ where: { deviceId } });
+      } catch {
+        license = L.getByDevice(deviceId);
+      }
     }
 
     if (!license) {
@@ -32,11 +40,15 @@ export async function POST(req: NextRequest) {
       const now = new Date();
       const expiresAt = new Date(license.expiresAt);
       if (now >= expiresAt) {
-        try {
-          const { db } = await import('@/lib/db');
-          await db.license.update({ where: { id: license.id }, data: { status: 'EXPIRED' } });
-        } catch {
-          L.update(license.id, { status: 'EXPIRED' });
+        if (turso.isAvailable()) {
+          await turso.updateLicense(license.id, { status: 'EXPIRED' });
+        } else {
+          try {
+            const { db } = await import('@/lib/db');
+            await db.license.update({ where: { id: license.id }, data: { status: 'EXPIRED' } });
+          } catch {
+            L.update(license.id, { status: 'EXPIRED' });
+          }
         }
         return NextResponse.json({ valid: false, type: license.type, status: 'EXPIRED', clientName: license.clientName, message: 'Your license has expired.', deviceId });
       }
@@ -46,7 +58,7 @@ export async function POST(req: NextRequest) {
     const msLeft = expiresAtVal ? expiresAtVal.getTime() - Date.now() : null;
     return NextResponse.json({
       valid: true, type: license.type, status: license.status || 'ACTIVE',
-      clientName: license.clientName, expiresAt: license.expiresAt?.toString?.() ?? null,
+      clientName: license.clientName, expiresAt: license.expiresAt ?? null,
       daysLeft: msLeft ? Math.floor(msLeft / 86400000) : undefined,
       hoursLeft: msLeft ? Math.floor(msLeft / 3600000) : undefined,
       message: `Welcome back, ${license.clientName}!`,
