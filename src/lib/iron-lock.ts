@@ -209,7 +209,7 @@ export async function activateLicense(key: string, deviceId: string): Promise<{ 
   } catch (err) {
     // Demo key universal para testing (funciona sin servidor)
   if (key.trim().toUpperCase() === 'DEMO-A2K-2026-TEST' || key.trim().toUpperCase() === 'STPD-DEMO-TEST-KEY') {
-    localStorage.setItem('A2K_LICENSE_KEY', cleanKey);
+    localStorage.setItem('A2K_LICENSE_KEY', key.trim().toUpperCase());
     localStorage.setItem('A2K_LICENSE_EXPIRES', String(Date.now() + 30 * 86400000));
     return { success: true, message: 'Demo mode activated!', license: { valid: true, type: 'DEMO', status: 'ACTIVE', clientName: 'Demo User', deviceId } };
   }
