@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getDerivAPI, type Tick, type ActiveSymbol } from './deriv-api';
 import { generateCompositeSignal, calculateATR, type StrategySignal, SYNTHETIC_MARKETS } from './strategies';
+import { track } from './analytics';
 
 export interface TradeRecord {
   id?: string;
@@ -25,7 +26,7 @@ export interface LogEntry {
   message: string;
 }
 
-interface RiskSettings {
+export interface RiskSettings {
   maxDailyLoss: number;
   dailyProfitTarget: number;
   maxTradesPerSession: number;
@@ -42,7 +43,7 @@ const defaultRiskSettings: RiskSettings = {
   maxDailyLoss: 20,
   dailyProfitTarget: 50,
   maxTradesPerSession: 100,
-  stopAfterConsecutiveLosses: 5,
+  stopAfterConsecutiveLosses: 2,
   useMartingale: false,
   martingaleMultiplier: 2.0,
   martingaleMaxSteps: 4,
@@ -283,6 +284,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       });
       get().addLog('success', `Authorized: ${auth.authorize.fullname} (${auth.authorize.loginid})`);
       get().addLog('info', `Account Type: ${auth.authorize.is_virtual ? 'DEMO (Virtual)' : 'REAL'} | Currency: ${auth.authorize.currency}`);
+      track('cuenta_conectada', { is_virtual: auth.authorize.is_virtual === 1, currency: auth.authorize.currency });
 
       // Subscribe to balance updates
       try {
@@ -674,6 +676,13 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
           get().addLog('trade', `✅ ${type} BOUGHT | #${buyResult.buy.contract_id} | ${state.currentSymbol} | Stake: $${buyResult.buy.buy_price.toFixed(2)} | Payout: $${buyResult.buy.payout.toFixed(2)}`);
           get().playSound('trade');
+          track('trade_ejecutado', {
+            symbol: state.currentSymbol,
+            contract_type: type,
+            strategy: newTrade.strategy,
+            amount: buyResult.buy.buy_price,
+            payout: buyResult.buy.payout,
+          });
           get().sendNotification(`${type} Trade Opened`, `$${buyResult.buy.buy_price.toFixed(2)} on ${state.currentSymbol}`);
 
           // Save trade to database
